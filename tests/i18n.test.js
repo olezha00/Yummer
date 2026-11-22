@@ -37,3 +37,20 @@ test("date labels are translated", () => {
   setLang("pl"); assert.equal(dateLabel(today()), "Dziś");
   setLang("en"); assert.equal(dateLabel(today()), "Today");
 });
+test("t() escapes values for HTML, raw() opts out, tText() leaves text as is", async () => {
+  const { raw, tText } = await import("../js/i18n.js");
+  setLang("en");
+  assert.equal(t("describe.remove", { name: "<b>x</b>" }), "Remove &lt;b&gt;x&lt;/b&gt;");
+  assert.equal(t("diary.eaten", { n: raw("<b>5</b>") }), "Eaten <b>5</b> kcal");
+  assert.equal(tText("describe.remove", { name: "A & B" }), "Remove A & B");
+});
+test("keys built at runtime exist in every language", async () => {
+  const { MEAL_KEYS } = await import("../js/data/foods.js");
+  const dynamic = [...MEAL_KEYS.map(k => "meal." + k), ...["protein", "fat", "carbs"].map(k => "macro." + k + "Short"), ...["diary", "foods", "settings"].map(k => "tab." + k)];
+  for (const [l, d] of Object.entries(DICTS)) for (const k of dynamic) assert.ok(typeof d[k] === "string", `${l} is missing ${k}`);
+});
+test("built-in foods are found by any of their four names", () => {
+  setLang("en");
+  const quark = genericFoods().find(f => f.name === "Quark, half-fat");
+  for (const w of ["twarog", "творог", "quark"]) assert.ok(quark.search.includes(w), w);
+});

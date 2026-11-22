@@ -1,5 +1,5 @@
 import { IDB, sanitizeLabel } from "../data/store.js";
-import { t } from "../i18n.js";
+import { tText } from "../i18n.js";
 import { blobToB64 } from "../util.js";
 
 /* ---------- AI: Google Gemini (free tier, default) or Claude, with the person's own key stored on this device ---------- */
@@ -10,8 +10,8 @@ export const AI = {
   ready() { return !!this.key; },
   label() { return this.provider === "gemini" ? "Gemini" : "Claude"; },
   async call(text, images, wantJSON, schema) {
-    if (!this.key) throw Object.assign(new Error(t("ai.err.noKey", { provider: this.label() })), { code: "nokey" });
-    if (!navigator.onLine) throw Object.assign(new Error(t("ai.err.offline")), { code: "offline" });
+    if (!this.key) throw Object.assign(new Error(tText("ai.err.noKey", { provider: this.label() })), { code: "nokey" });
+    if (!navigator.onLine) throw Object.assign(new Error(tText("ai.err.offline")), { code: "offline" });
     const b64 = []; for (const img of images || []) b64.push(await blobToB64(img));
     return this.provider === "gemini" ? this.gemini(text, b64, wantJSON) : this.claude(text, b64, schema);
   },
@@ -22,18 +22,18 @@ export const AI = {
       r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(this.geminiModel) + ":generateContent", {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": this.key },
         body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: wantJSON ? { responseMimeType: "application/json" } : {} }) });
-    } catch { throw Object.assign(new Error(t("ai.err.geminiNet")), { code: "net" }); }
+    } catch { throw Object.assign(new Error(tText("ai.err.geminiNet")), { code: "net" }); }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = (j.error && j.error.message) || "";
-      if (r.status === 429) throw Object.assign(new Error(t("ai.err.geminiRate")), { code: "rate" });
-      if (r.status === 404) throw Object.assign(new Error(t("ai.err.geminiModel", { model: this.geminiModel })), { code: "model" });
-      if (r.status === 400 && /api key/i.test(msg) || r.status === 401 || r.status === 403) throw Object.assign(new Error(t("ai.err.geminiAuth")), { code: "auth" });
-      throw Object.assign(new Error(t("ai.err.geminiStatus", { status: r.status, msg: msg ? ": " + msg : "" })), { code: "bad" });
+      if (r.status === 429) throw Object.assign(new Error(tText("ai.err.geminiRate")), { code: "rate" });
+      if (r.status === 404) throw Object.assign(new Error(tText("ai.err.geminiModel", { model: this.geminiModel })), { code: "model" });
+      if (r.status === 400 && /api key/i.test(msg) || r.status === 401 || r.status === 403) throw Object.assign(new Error(tText("ai.err.geminiAuth")), { code: "auth" });
+      throw Object.assign(new Error(tText("ai.err.geminiStatus", { status: r.status, msg: msg ? ": " + msg : "" })), { code: "bad" });
     }
     const c = j.candidates && j.candidates[0];
     const out = c && c.content && (c.content.parts || []).map(x => x.text || "").join("");
-    if (!out) throw Object.assign(new Error(t("ai.err.geminiEmpty", { reason: c && c.finishReason ? " (" + c.finishReason + ")" : "" })), { code: "empty" });
+    if (!out) throw Object.assign(new Error(tText("ai.err.geminiEmpty", { reason: c && c.finishReason ? " (" + c.finishReason + ")" : "" })), { code: "empty" });
     return out;
   },
   async claude(text, b64, schema) {
@@ -50,12 +50,12 @@ export const AI = {
       });
     } catch (e) {
       const st = e && e.status;
-      if (st === 401) throw Object.assign(new Error(t("ai.err.claudeAuth")), { code: "auth" });
-      if (st === 429) throw Object.assign(new Error(t("ai.err.claudeRate")), { code: "rate" });
-      if (st === 400) throw Object.assign(new Error(t("ai.err.claudeBad", { msg: e.message || "" })), { code: "bad" });
-      throw Object.assign(new Error(t("ai.err.claudeNet")), { code: "net" });
+      if (st === 401) throw Object.assign(new Error(tText("ai.err.claudeAuth")), { code: "auth" });
+      if (st === 429) throw Object.assign(new Error(tText("ai.err.claudeRate")), { code: "rate" });
+      if (st === 400) throw Object.assign(new Error(tText("ai.err.claudeBad", { msg: e.message || "" })), { code: "bad" });
+      throw Object.assign(new Error(tText("ai.err.claudeNet")), { code: "net" });
     }
-    if (res.stop_reason === "refusal") throw Object.assign(new Error(t("ai.err.refusal")), { code: "refusal" });
+    if (res.stop_reason === "refusal") throw Object.assign(new Error(tText("ai.err.refusal")), { code: "refusal" });
     return res.content.filter(b => b.type === "text").map(b => b.text).join("");
   },
   async text(prompt) { return this.call(prompt, [], false); },
@@ -92,6 +92,6 @@ export const ITEMS_SCHEMA = { type: "object", additionalProperties: false, requi
 export async function readLabel(file) {
   const img = await shrink(file);
   const out = await AI.json(LABEL_PROMPT, LABEL_SCHEMA, [img]);
-  if (!out || typeof out !== "object") throw new Error(t("ai.err.label"));
+  if (!out || typeof out !== "object") throw new Error(tText("ai.err.label"));
   return sanitizeLabel(out);
 }

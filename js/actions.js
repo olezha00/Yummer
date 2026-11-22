@@ -1,5 +1,5 @@
 import { DEFAULT_GOALS, genericFoods, mealLabel } from "./data/foods.js";
-import { I18N, setLang, t } from "./i18n.js";
+import { I18N, setLang, tText } from "./i18n.js";
 import { Data, IDB, sanitizeAIItem, watchDay } from "./data/store.js";
 import { AI, ITEMS_SCHEMA, readLabel, saveAISettings } from "./services/ai.js";
 import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
@@ -17,22 +17,22 @@ export function handleCode(code) {
   const digits = code.replace(/\s/g, "");
   const found = S.foods.find(f => f.barcode && f.barcode === digits);
   if (found) { openSheet({ step: "amount", meal: ui.sheet.meal, food: { ...found, source: "mine" }, grams: found.serving || 100, unit: found.serving ? "srv" : "g" }); return; }
-  if (/^https?:\/\//i.test(digits)) { setStatus(t("scan.qrLink", { url: digits.slice(0, 60) }), true); return; }
+  if (/^https?:\/\//i.test(digits)) { setStatus(tText("scan.qrLink", { url: digits.slice(0, 60) }), true); return; }
   if (navigator.onLine) { lookupBarcode(digits); return; }
-  newProductForm(digits, t("scan.notMine", { code: digits }));
+  newProductForm(digits, tText("scan.notMine", { code: digits }));
 }
 export async function lookupBarcode(digits) {
-  setStatus(t("scan.looking", { code: digits }));
+  setStatus(tText("scan.looking", { code: digits }));
   try {
     const f = await offByBarcode(digits);
     if (!ui.sheet) return;
     if (offComplete(f)) { openSheet({ step: "amount", meal: ui.sheet.meal, food: f, grams: f.serving || 100, unit: f.serving ? "srv" : "g" }); return; }
-    newProductForm(digits, f ? t("scan.partial") : t("scan.notInOff", { code: digits }), f);
+    newProductForm(digits, f ? tText("scan.partial") : tText("scan.notInOff", { code: digits }), f);
   } catch (e) { if (ui.sheet) newProductForm(digits, offErrorText(e)); }
 }
 export function newProductForm(digits, why, partial) {
   openSheet({ step: "food", meal: ui.sheet.meal, food: { ...(partial || {}), barcode: digits, source: undefined }, pendingCode: digits,
-    status: why + " " + t("scan.newProduct") });
+    status: why + " " + tText("scan.newProduct") });
 }
 
 
@@ -51,21 +51,21 @@ export async function runOffSearch() {
 export async function runAI() {
   const text = ($("#aitext")?.value || "").trim();
   ui.sheet.text = text;
-  if (!text) { ui.sheet.status = t("describe.empty"); ui.sheet.err = true; return renderSheet(); }
-  ui.sheet.busy = true; ui.sheet.status = t("describe.asking", { provider: AI.label() }); ui.sheet.err = false; renderSheet();
+  if (!text) { ui.sheet.status = tText("describe.empty"); ui.sheet.err = true; return renderSheet(); }
+  ui.sheet.busy = true; ui.sheet.status = tText("describe.asking", { provider: AI.label() }); ui.sheet.err = false; renderSheet();
   const prompt = `You estimate nutrition for a food diary. The person wrote what they ate:
 """${text}"""
 Split it into separate foods. For each, estimate the eaten amount in grams (use typical Polish/European portions and products when not specified) and the TOTAL kcal, protein, fat and carbs for that amount.
 Return JSON only, no prose, exactly: {"items":[{"name":string,"grams":number,"kcal":number,"protein":number,"fat":number,"carbs":number}]}
-Write food names in ${t("lang.prompt")}.`;
+Write food names in ${tText("lang.prompt")}.`;
   try {
     const out = await AI.json(prompt, ITEMS_SCHEMA);
     const items = (Array.isArray(out?.items) ? out.items : []).slice(0, 30).map(sanitizeAIItem).filter(Boolean);
     ui.sheet.items = items; ui.sheet.busy = false;
-    ui.sheet.status = items.length ? "" : t("describe.unclear"); ui.sheet.err = !items.length;
+    ui.sheet.status = items.length ? "" : tText("describe.unclear"); ui.sheet.err = !items.length;
   } catch (e) {
     ui.sheet.busy = false; ui.sheet.err = true;
-    ui.sheet.status = e?.message || t("describe.failed");
+    ui.sheet.status = e?.message || tText("describe.failed");
   }
   renderSheet();
 }
@@ -78,13 +78,13 @@ export function entryFromFood(f, grams, meal) {
     per100: { kcal: +f.kcal, protein: +f.protein, fat: +f.fat, carbs: +f.carbs, serving: f.serving || null },
     foodId: f.source === "mine" ? f.id : null };
 }
-export async function safe(p, ok) { try { await p; if (ok) toast(ok); } catch (e) { toast(t("common.saveFailed", { msg: e?.message || t("common.tryAgain") }), true); } }
+export async function safe(p, ok) { try { await p; if (ok) toast(ok); } catch (e) { toast(tText("common.saveFailed", { msg: e?.message || tText("common.tryAgain") }), true); } }
 
 
 /* ---------- Settings actions ---------- */
 export async function testKey() {
-  const st = $("#keyStatus"); if (!st) return; st.className = "status"; st.textContent = t("ai.testing");
-  try { await AI.text("Reply with the single word: ok"); const s2 = $("#keyStatus"); if (s2) { s2.textContent = t("ai.works"); } }
+  const st = $("#keyStatus"); if (!st) return; st.className = "status"; st.textContent = tText("ai.testing");
+  try { await AI.text("Reply with the single word: ok"); const s2 = $("#keyStatus"); if (s2) { s2.textContent = tText("ai.works"); } }
   catch (e) { const s2 = $("#keyStatus"); if (s2) { s2.textContent = e.message; s2.className = "status err"; } }
 }
 export async function doExport() {
@@ -95,13 +95,13 @@ export async function doExport() {
     const file = new File([JSON.stringify(data)], name, { type: "application/json" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); }
     else { const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
-    if (st) { st.className = "status"; st.textContent = t("backup.ready", { entries: data.entries.length, foods: data.foods.length }); }
-  } catch (e) { if (st && e.name !== "AbortError") { st.className = "status err"; st.textContent = t("backup.exportFailed", { msg: e.message }); } }
+    if (st) { st.className = "status"; st.textContent = tText("backup.ready", { entries: data.entries.length, foods: data.foods.length }); }
+  } catch (e) { if (st && e.name !== "AbortError") { st.className = "status err"; st.textContent = tText("backup.exportFailed", { msg: e.message }); } }
 }
 
 /** Text that lives in index.html (scanner overlay): elements carry data-i18n="key". */
 export function applyStaticText() {
-  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = tText(el.dataset.i18n);
 }
 
 /* ---------- Event wiring (called once from main.js) ---------- */
@@ -111,17 +111,17 @@ export function bindEvents() {
     if (!file || !ui.sheet) return;
     const purpose = camPurpose;
     if (purpose === "scan") {
-      setStatus(t("scan.decoding"));
+      setStatus(tText("scan.decoding"));
       let code = await decodeBarcode(file);
       if (!code && AI.ready()) {
-        setStatus(t("scan.askAI", { provider: AI.label() }));
+        setStatus(tText("scan.askAI", { provider: AI.label() }));
         try { code = (await readLabel(file)).barcode; } catch {}
       }
-      if (!code) return setStatus(t("scan.notFound"), true);
+      if (!code) return setStatus(tText("scan.notFound"), true);
       handleCode(code.trim());
     } else if (purpose === "label" || purpose === "labelForm") {
-      if (ui.sheet.step !== "food") openSheet({ step: "food", meal: ui.sheet.meal, food: { barcode: ui.sheet.pendingCode || null }, busy: true, status: t("food.reading") });
-      else { ui.sheet.busy = true; ui.sheet.status = t("food.reading"); ui.sheet.err = false; renderSheet(); }
+      if (ui.sheet.step !== "food") openSheet({ step: "food", meal: ui.sheet.meal, food: { barcode: ui.sheet.pendingCode || null }, busy: true, status: tText("food.reading") });
+      else { ui.sheet.busy = true; ui.sheet.status = tText("food.reading"); ui.sheet.err = false; renderSheet(); }
       try {
         const cur = readFoodForm();
         const r = await readLabel(file);
@@ -130,9 +130,9 @@ export function bindEvents() {
         if (!merged.barcode && r.barcode) merged.barcode = r.barcode;
         ui.sheet.food = merged; ui.sheet.busy = false;
         const missing = ["kcal", "protein", "fat", "carbs"].filter(k => merged[k] == null);
-        ui.sheet.status = missing.length ? t("food.labelPartial", { missing: missing.map(k => k === "kcal" ? t("unit.kcal") : t("macro." + k + "Short")).join(", ") }) : t("food.labelDone");
+        ui.sheet.status = missing.length ? tText("food.labelPartial", { missing: missing.map(k => k === "kcal" ? tText("unit.kcal") : tText("macro." + k + "Short")).join(", ") }) : tText("food.labelDone");
         ui.sheet.err = !!missing.length; renderSheet();
-      } catch (e) { ui.sheet.busy = false; ui.sheet.status = (e?.message || t("food.labelFailed")); ui.sheet.err = true; renderSheet(); }
+      } catch (e) { ui.sheet.busy = false; ui.sheet.status = (e?.message || tText("food.labelFailed")); ui.sheet.err = true; renderSheet(); }
     }
   });
 
@@ -158,11 +158,11 @@ export function bindEvents() {
       }
       case "unit": ui.sheet.unit = b.dataset.u; renderSheet(); break;
       case "addEntry": {
-        const grams = +ui.sheet.grams; if (!(grams > 0)) return setStatus(t("amount.enterQty"), true);
+        const grams = +ui.sheet.grams; if (!(grams > 0)) return setStatus(tText("amount.enterQty"), true);
         const meal = $("#mealSel").value; const e = entryFromFood(ui.sheet.food, grams, meal);
         const fd = ui.sheet.food; closeSheet();
         if (fd.source === "off" && !S.foods.some(x => x.barcode === fd.barcode)) { const { id, source, ...keep } = fd; try { const nid = await Data.addFood({ ...keep, source: "off" }); e.foodId = nid; } catch {} }
-        await safe(Data.addEntry(e), t("amount.added", { name: e.name, meal: mealLabel(meal) })); break;
+        await safe(Data.addEntry(e), tText("amount.added", { name: e.name, meal: mealLabel(meal) })); break;
       }
       case "editEntry": {
         const e = S.entries.find(x => x.id === b.dataset.id); if (!e) return;
@@ -172,18 +172,18 @@ export function bindEvents() {
       case "saveEntry": {
         const grams = +ui.sheet.grams; if (!(grams > 0)) return;
         const m = scale(ui.sheet.food, grams), meal = $("#mealSel").value, id = ui.sheet.id;
-        closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), t("amount.saved")); break;
+        closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), tText("amount.saved")); break;
       }
       case "askDel": ui.sheet.confirmDel = true; renderSheet(); break;
-      case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), t("amount.deleted")); break; }
-      case "toAI": if (!AI.ready()) return setStatus(t("ai.needKeyDescribe"), true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
+      case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), tText("amount.deleted")); break; }
+      case "toAI": if (!AI.ready()) return setStatus(tText("ai.needKeyDescribe"), true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
       case "runAI": runAI(); break;
       case "aiDrop": ui.sheet.text = $("#aitext").value; ui.sheet.items.splice(+b.dataset.i, 1); renderSheet(); break;
       case "aiAdd": {
         const meal = ui.sheet.meal, items = ui.sheet.items; closeSheet();
         const list = items.map(i => ({ date: S.date, meal, name: i.name, grams: r1(i.grams), kcal: r1(i.kcal), protein: r1(i.protein), fat: r1(i.fat), carbs: r1(i.carbs),
           per100: { kcal: r1(i.kcal / i.grams * 100), protein: r1(i.protein / i.grams * 100), fat: r1(i.fat / i.grams * 100), carbs: r1(i.carbs / i.grams * 100), serving: null }, foodId: null, estimated: true }));
-        await safe(Data.addEntries(list), t("describe.added", { meal: mealLabel(meal), n: list.length })); break;
+        await safe(Data.addEntries(list), tText("describe.added", { meal: mealLabel(meal), n: list.length })); break;
       }
       case "scan": ui.sheet.status = ""; startScanner({ onCode: c => { if (ui.sheet) handleCode(c); }, onPhoto: () => pickPhoto("scan"), onError: msg => setStatus(msg, true) }); break;
       case "scanClose": stopScanner(); break;
@@ -192,15 +192,15 @@ export function bindEvents() {
       case "import": $("#importInput").value = ""; $("#importInput").click(); break;
       case "testKey": testKey(); break;
       case "askDelKey": S.confirmKeyDel = true; render(); break;
-      case "delKey": AI.keys[AI.provider] = null; S.confirmKeyDel = false; await saveAISettings(); render(); toast(t("ai.keyDeleted")); break;
+      case "delKey": AI.keys[AI.provider] = null; S.confirmKeyDel = false; await saveAISettings(); render(); toast(tText("ai.keyDeleted")); break;
       case "provider": AI.provider = b.dataset.p; S.confirmKeyDel = false; await saveAISettings(); render(); break;
       case "offSearch": runOffSearch(); break;
-      case "labelPhoto": if (!AI.ready()) return setStatus(t("ai.needKeyLabel"), true); pickPhoto("label"); break;
-      case "labelIntoForm": ui.sheet.food = readFoodForm(); if (!AI.ready()) return setStatus(t("ai.needKeyLabel"), true); pickPhoto("labelForm"); break;
+      case "labelPhoto": if (!AI.ready()) return setStatus(tText("ai.needKeyLabel"), true); pickPhoto("label"); break;
+      case "labelIntoForm": ui.sheet.food = readFoodForm(); if (!AI.ready()) return setStatus(tText("ai.needKeyLabel"), true); pickPhoto("labelForm"); break;
       case "newFood": openSheet({ step: "food", meal: ui.sheet?.meal || null, food: { name: ui.sheet?.q || "" }, q0: ui.sheet?.q, recent0: ui.sheet?.recent }); break;
       case "editFood": { const f = S.foods.find(x => x.id === b.dataset.id); if (f) openSheet({ step: "food", id: f.id, food: { ...f } }); break; }
       case "askDelFood": ui.sheet.food = readFoodForm(); ui.sheet.confirmDel = true; renderSheet(); break;
-      case "delFood": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteFood(id), t("food.deleted")); break; }
+      case "delFood": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteFood(id), tText("food.deleted")); break; }
     }
   });
 
@@ -209,7 +209,7 @@ export function bindEvents() {
     if (!ui.sheet) {
       if (el.id && el.id.startsWith("g-")) {
         const n = id => +($("#" + id)?.value || 0);
-        const calc = $("#g-calc"); if (calc) calc.textContent = Math.round(n("g-protein") * 4 + n("g-fat") * 9 + n("g-carbs") * 4) + " " + t("unit.kcal");
+        const calc = $("#g-calc"); if (calc) calc.textContent = Math.round(n("g-protein") * 4 + n("g-fat") * 9 + n("g-carbs") * 4) + " " + tText("unit.kcal");
       }
       return;
     }
@@ -236,7 +236,7 @@ export function bindEvents() {
     ev.preventDefault();
     if (ev.target.id === "goalsForm") {
       const n = id => Math.max(0, Math.round(+$("#" + id).value || 0));
-      await safe(Data.saveGoals({ kcal: n("g-kcal") || DEFAULT_GOALS.kcal, protein: n("g-protein"), fat: n("g-fat"), carbs: n("g-carbs") }), t("goals.saved"));
+      await safe(Data.saveGoals({ kcal: n("g-kcal") || DEFAULT_GOALS.kcal, protein: n("g-protein"), fat: n("g-fat"), carbs: n("g-carbs") }), tText("goals.saved"));
       S.goalsSet = true; render();
     }
     if (ev.target.id === "keyForm") {
@@ -244,7 +244,7 @@ export function bindEvents() {
       if (m) AI.geminiModel = m;
       if (k) {
         const bad = AI.provider === "claude" ? !/^sk-ant-/.test(k) : k.length < 20;
-        if (bad) { const st = $("#keyStatus"); st.textContent = AI.provider === "claude" ? t("ai.badClaudeKey") : t("ai.badGeminiKey"); st.className = "status err"; return; }
+        if (bad) { const st = $("#keyStatus"); st.textContent = AI.provider === "claude" ? tText("ai.badClaudeKey") : tText("ai.badGeminiKey"); st.className = "status err"; return; }
         AI.keys[AI.provider] = k;
       }
       await saveAISettings(); S.confirmKeyDel = false; render(); if (AI.key) testKey();
@@ -252,23 +252,23 @@ export function bindEvents() {
     }
     if (ev.target.id === "foodForm") {
       const f = readFoodForm();
-      if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { ui.sheet.food = f; return setStatus(t("food.fillAll"), true); }
-      if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; return setStatus(t("food.duplicateBarcode"), true); }
+      if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { ui.sheet.food = f; return setStatus(tText("food.fillAll"), true); }
+      if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; return setStatus(tText("food.duplicateBarcode"), true); }
       const meal = ui.sheet.meal, id = ui.sheet.id;
       try {
-        if (id) { await Data.updateFood(id, f); closeSheet(); toast(t("food.saved")); return; }
+        if (id) { await Data.updateFood(id, f); closeSheet(); toast(tText("food.saved")); return; }
         const newId = await Data.addFood({ ...f, source: "custom" });
         if (meal) openSheet({ step: "amount", meal, food: { ...f, id: newId, source: "mine" }, grams: f.serving || 100, unit: f.serving ? "srv" : "g" });
-        else { closeSheet(); toast(t("food.saved")); }
-      } catch (e) { setStatus(t("common.saveFailed", { msg: e?.message || t("common.tryAgain") }), true); }
+        else { closeSheet(); toast(tText("food.saved")); }
+      } catch (e) { setStatus(tText("common.saveFailed", { msg: e?.message || tText("common.tryAgain") }), true); }
     }
   });
 
   $("#importInput").addEventListener("change", async ev => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     // Look the status line up after the import: the import re-renders Settings and replaces the element.
-    try { const r = await Data.importAll(JSON.parse(await f.text())); const st = $("#bkStatus"); if (st) { st.className = "status"; st.textContent = t("backup.restored", { entries: r.entries, foods: r.foods }) + (r.skipped ? " " + t("backup.skipped", { n: r.skipped }) : ""); } }
-    catch (e) { const st = $("#bkStatus"); if (st) { st.className = "status err"; st.textContent = e.message || t("backup.readFailed"); } }
+    try { const r = await Data.importAll(JSON.parse(await f.text())); const st = $("#bkStatus"); if (st) { st.className = "status"; st.textContent = tText("backup.restored", { entries: r.entries, foods: r.foods }) + (r.skipped ? " " + tText("backup.skipped", { n: r.skipped }) : ""); } }
+    catch (e) { const st = $("#bkStatus"); if (st) { st.className = "status err"; st.textContent = e.message || tText("backup.readFailed"); } }
   });
   window.addEventListener("online", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });
   window.addEventListener("offline", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });

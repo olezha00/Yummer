@@ -1,6 +1,6 @@
 // Syntax-checks every app module and confirms each relative import points at a real export.
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname, resolve, sep } from "node:path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
@@ -59,7 +59,9 @@ for (const [l, d] of dicts) {
 const usedKeys = new Set();
 for (const f of files) {
   const src = readFileSync(f, "utf8");
-  for (const m of src.matchAll(/\bt[r]?\("([\w.]*\w)"/g)) usedKeys.add(m[1]);
+  for (const m of src.matchAll(/\bt(?:Text)?\("([\w.]*\w)"/g)) usedKeys.add(m[1]);
+  // t() HTML-escapes its values, so it belongs in js/ui/ templates; elsewhere text goes to textContent/Errors via tText().
+  if (!f.includes(`ui${sep}`) && /import \{[^}]*\bt\b[^}]*\} from "[^"]*i18n\.js"/.test(src)) { failed = true; console.error(`${f} imports t(): outside js/ui/ use tText()`); }
   // A local variable or parameter named `t` would hide the translator and break rendering at runtime.
   if (/import \{[^}]*\bt\b[^}]*\} from "[^"]*i18n\.js"/.test(src) && /(?:const|let|var)\s+t\b|\(\s*t\s*[,)]|\bt\s*=>/.test(src)) { failed = true; console.error(`${f} shadows the translator t(): rename the local variable`); }
   if (!f.includes("i18n") && !f.endsWith("foods.js") && /[\u0400-\u04FF]/.test(src)) { failed = true; console.error(`${f} has Cyrillic text: move it to js/i18n/`); }

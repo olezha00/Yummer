@@ -37,7 +37,7 @@ export function sheetSearch(s) {
   let results;
   if (q) {
     const words = q.split(/\s+/).filter(Boolean);
-    const hit = f => { const n = norm(f.name + " " + (f.brand || "")); return words.every(w => n.includes(w)); };
+    const hit = f => { const n = f.search || norm(f.name + " " + (f.brand || "")); return words.every(w => n.includes(w)); };
     const code = s.q.trim();
     results = [...mine.filter(f => hit(f) || (f.barcode && f.barcode === code)), ...genericFoods().filter(hit)].slice(0, 30);
   } else results = null;
@@ -49,10 +49,10 @@ export function sheetSearch(s) {
   const row = f => `<button class="item" data-act="pick" data-src="${esc(f.source)}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.source === "generic" ? `<span class="tag">${t("search.tagGeneric")}</span>` : f.source === "recent" ? `<span class="tag">${t("search.tagRecent")}</span>` : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
     <div class="sub num">${f.brand ? esc(f.brand) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`;
   if (results) list = results.length ? `<div class="results">${results.map(row).join("")}</div>` :
-    `<div class="empty">${t("search.nothing", { q: esc(s.q) })} <button class="btn" data-act="newFood" style="padding:4px 10px">${t("search.createFood")}</button></div>`;
+    `<div class="empty">${t("search.nothing", { q: s.q })} <button class="btn" data-act="newFood" style="padding:4px 10px">${t("search.createFood")}</button></div>`;
   else if (s.recent?.length) list = `<p class="small muted" style="margin:4px 0">${t("search.recent")}</p><div class="results">${s.recent.map(e => row({ id: "r:" + e.name, name: e.name, ...e.per100, source: "recent" })).join("")}</div>`;
   else list = `<p class="small muted">${t("search.intro", { n: GENERIC_COUNT })}</p>`;
-  return `<h3>${esc(t("search.add", { meal: mealLabel(s.meal) }))}${closeBtn()}</h3>
+  return `<h3>${t("search.add", { meal: mealLabel(s.meal) })}${closeBtn()}</h3>
     <input type="search" id="q" placeholder="${t("search.placeholder")}" value="${esc(s.q || "")}" autocomplete="off" data-autofocus>
     ${tools}<div class="status ${s.err ? "err" : ""}" id="sstatus">${esc(s.status || "")}</div>${list}
     ${offBlock(s, row)}`;
@@ -91,10 +91,10 @@ export function sheetAI(s) {
       <button class="btn primary" data-act="runAI" ${s.busy ? "disabled" : ""}>${s.busy ? t("describe.busy") : items.length ? t("describe.again") : t("describe.run")}</button>
       <div class="status ${s.err ? "err" : ""}">${esc(s.status || "")}</div>
       ${items.length ? `<div class="list aiitems">${items.map((e, i) => `<div class="item"><div class="main"><div class="name">${esc(e.name)}</div><div class="sub num">${fm(e.grams)} ${t("unit.g")} · ${dots(e)}</div></div>
-          <div class="kc num">${Math.round(e.kcal)}</div><button class="btn" data-act="aiDrop" data-i="${i}" aria-label="${esc(t("describe.remove", { name: e.name }))}" style="padding:4px 10px">✕</button></div>`).join("")}</div>
+          <div class="kc num">${Math.round(e.kcal)}</div><button class="btn" data-act="aiDrop" data-i="${i}" aria-label="${t("describe.remove", { name: e.name })}" style="padding:4px 10px">✕</button></div>`).join("")}</div>
         <div class="preview num">${previewHTML(tot)}</div>
         <p class="small muted">${t("describe.estimate")}</p>
-        <button class="btn primary block" data-act="aiAdd">${esc(t("describe.addTo", { meal: mealLabel(s.meal), n: items.length }))}</button>` : ""}
+        <button class="btn primary block" data-act="aiAdd">${t("describe.addTo", { meal: mealLabel(s.meal), n: items.length })}</button>` : ""}
       <button class="btn block" data-act="back">${t("common.back")}</button>
     </div>`;
 }
@@ -138,9 +138,9 @@ export function offBlock(s, row) {
   if (!navigator.onLine) return `<p class="small muted" style="margin-top:14px">${t("off.offline")}</p>`;
   const q = (s.q || "").trim();
   let h = `<div style="margin-top:14px" class="stack">`;
-  if (q && !/^\d{8,14}$/.test(q)) h += `<button class="btn block" data-act="offSearch" ${s.offBusy ? "disabled" : ""}>${s.offBusy ? t("off.searching") : t("off.searchFor", { q: esc(q) }) + (I18N.lang !== "pl" && AI.ready() ? t("off.inPolish") : "")}</button>`;
+  if (q && !/^\d{8,14}$/.test(q)) h += `<button class="btn block" data-act="offSearch" ${s.offBusy ? "disabled" : ""}>${s.offBusy ? t("off.searching") : t("off.searchFor", { q }) + (I18N.lang !== "pl" && AI.ready() ? t("off.inPolish") : "")}</button>`;
   if (s.offErr) h += `<div class="status err">${esc(s.offErr)}</div>`;
-  if (s.offResults && s.offFor === q) h += s.offResults.length ? `<p class="small muted" style="margin:0">Open Food Facts${s.offQuery && s.offQuery !== q ? t("off.resultsPolish", { q: esc(s.offQuery) }) : ""}</p><div class="results">${s.offResults.map(row).join("")}</div>` : `<p class="small muted" style="margin:0">${t("off.noResults")}</p>`;
+  if (s.offResults && s.offFor === q) h += s.offResults.length ? `<p class="small muted" style="margin:0">Open Food Facts${s.offQuery && s.offQuery !== q ? t("off.resultsPolish", { q: s.offQuery }) : ""}</p><div class="results">${s.offResults.map(row).join("")}</div>` : `<p class="small muted" style="margin:0">${t("off.noResults")}</p>`;
   h += `<p class="small muted" style="margin:0">${offCredit()}</p></div>`;
   return h;
 }

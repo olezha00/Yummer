@@ -24,10 +24,21 @@ export function setLang(choice) {
 }
 export const deviceLang = () => detectLang(deviceLangs());
 
-/** Translates a key and fills {placeholders}. Missing keys fall back to English, then to the key itself. */
-export function t(key, vars) {
-  const s = DICTS[I18N.lang]?.[key] ?? DICTS[FALLBACK][key] ?? key;
-  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] ?? m)) : s;
+/* Translations are our own constants; the values filled into {placeholders} may come from outside
+   (food names, search text, API errors). So there are two functions:
+   - t()     for HTML: every value is HTML-escaped unless wrapped in raw().
+   - tText() for textContent, Error messages and statuses that are escaped later: values go in as they are. */
+class Raw { constructor(v) { this.v = String(v); } }
+/** Marks a trusted HTML fragment (our own markup) so t() inserts it unescaped. */
+export const raw = v => new Raw(v);
+const escHTML = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const lookup = key => DICTS[I18N.lang]?.[key] ?? DICTS[FALLBACK][key] ?? key;
+function fill(s, vars, enc) {
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] == null ? m : vars[k] instanceof Raw ? vars[k].v : enc(String(vars[k])))) : s;
 }
+/** Translated text for HTML. Missing keys fall back to English, then to the key itself. */
+export const t = (key, vars) => fill(lookup(key), vars, escHTML);
+/** Translated plain text (not for innerHTML). */
+export const tText = (key, vars) => fill(lookup(key), vars, v => v);
 /** Locale for Intl date formatting. */
 export const locale = () => ({ ru: "ru-RU", en: "en-GB", pl: "pl-PL", de: "de-DE" })[I18N.lang];

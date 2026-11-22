@@ -1,5 +1,5 @@
 import { DEFAULT_GOALS, meals } from "../data/foods.js";
-import { deviceLang, DICTS, I18N, LANGS, t } from "../i18n.js";
+import { deviceLang, DICTS, I18N, LANGS, raw, t } from "../i18n.js";
 import { AI } from "../services/ai.js";
 import { S } from "../state.js";
 import { $, dateLabel, esc, fm } from "../util.js";
@@ -10,7 +10,7 @@ export function totals(list) { return list.reduce((sum, e) => ({ kcal: sum.kcal 
 export function dial(tot, g) {
   const R = 56, C = 2 * Math.PI * R, pct = Math.min(1, g.kcal ? tot.kcal / g.kcal : 0), over = tot.kcal > g.kcal;
   const left = Math.round(g.kcal - tot.kcal);
-  return `<div class="dial" role="img" aria-label="${esc(t("diary.dialAria", { eaten: Math.round(tot.kcal), goal: g.kcal }))}">
+  return `<div class="dial" role="img" aria-label="${t("diary.dialAria", { eaten: Math.round(tot.kcal), goal: g.kcal })}">
     <svg viewBox="0 0 132 132"><circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--sunk)" stroke-width="12"/>
     ${pct > 0 ? `<circle cx="66" cy="66" r="${R}" fill="none" stroke="${over ? "var(--warn)" : "var(--accent)"}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C * pct} ${C}"/>` : ""}</svg>
     <div class="center"><div class="big num">${Math.abs(left)}</div><div class="small">${left >= 0 ? t("diary.left") : t("diary.over")}</div></div></div>`;
@@ -26,10 +26,10 @@ export function viewDiary() {
   const tot = totals(S.entries), g = S.goals;
   let h = "";
   if (S.mode === "error") return `<div class="banner warn">${esc(S.error)}</div>`;
-  if (!S.goalsSet && S.mode !== "loading") h += `<div class="banner">${esc(t("diary.defaultGoals", { kcal: DEFAULT_GOALS.kcal }))} <button class="btn" data-act="tab" data-tab="settings" style="padding:4px 10px;margin-left:4px">${t("diary.setGoals")}</button></div>`;
+  if (!S.goalsSet && S.mode !== "loading") h += `<div class="banner">${t("diary.defaultGoals", { kcal: DEFAULT_GOALS.kcal })} <button class="btn" data-act="tab" data-tab="settings" style="padding:4px 10px;margin-left:4px">${t("diary.setGoals")}</button></div>`;
   h += `<section class="summary">${dial(tot, g)}<div class="macros">
       ${macroBar(t("macro.protein"), "protein", tot, g, "--protein")}${macroBar(t("macro.fat"), "fat", tot, g, "--fat")}${macroBar(t("macro.carbs"), "carbs", tot, g, "--carbs")}</div>
-      <div class="kcalline num"><span>${t("diary.eaten", { n: `<b>${Math.round(tot.kcal)}</b>` })}</span><span>${t("diary.goal", { n: `<b>${g.kcal}</b>` })}</span></div></section>`;
+      <div class="kcalline num"><span>${t("diary.eaten", { n: raw(`<b>${Math.round(tot.kcal)}</b>`) })}</span><span>${t("diary.goal", { n: raw(`<b>${g.kcal}</b>`) })}</span></div></section>`;
   for (const [key, label] of meals()) {
     const items = S.entries.filter(e => e.meal === key).sort((a, b) => a.createdAt - b.createdAt);
     const mt = totals(items);
@@ -80,9 +80,9 @@ export function viewSettings() {
   </div>
   <p class="small muted" style="margin-top:18px">${offCredit()}</p>`;
 }
-export const offCredit = () => t("common.offData", { link: '<a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>' });
+export const offCredit = () => t("common.offData", { link: raw('<a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>') });
 export function viewLanguage() {
-  const opt = (v, label) => `<option value="${v}" ${I18N.choice === v ? "selected" : ""}>${esc(label)}</option>`;
+  const opt = (v, label) => `<option value="${v}" ${I18N.choice === v ? "selected" : ""}>${label}</option>`; // label is t() output or a dictionary constant
   return `<div class="section-title" style="margin-top:22px">${t("lang.title")}</div>
   <div class="card"><select id="langSel" aria-label="${t("lang.title")}">
     ${opt("auto", t("lang.auto", { name: DICTS[deviceLang()]["lang.name"] }))}${LANGS.map(l => opt(l, DICTS[l]["lang.name"])).join("")}

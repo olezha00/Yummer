@@ -1,4 +1,5 @@
-import { I18N, t } from "../i18n.js";
+import { I18N, tText } from "../i18n.js";
+import { norm } from "../util.js";
 
 /* ---------- Built-in generic foods (values per 100 g) ----------
    Each row: names in [ru, en, pl, de], then kcal, protein, fat, carbs, serving in grams (optional). */
@@ -96,13 +97,14 @@ const ROWS = [
 ];
 const NAME_INDEX = { ru: 0, en: 1, pl: 2, de: 3 };
 
-/** Generic foods with names in the current UI language (ids stay the same in every language). */
+/** Generic foods with names in the current UI language (ids stay the same in every language).
+ *  `search` holds all four names, so "twaróg" or "творог" finds quark whatever the UI language. */
 let cache = { lang: null, list: [] };
 export function genericFoods() {
   if (cache.lang !== I18N.lang) {
     const li = NAME_INDEX[I18N.lang] ?? 1;
     cache = { lang: I18N.lang, list: ROWS.map(([names, kcal, protein, fat, carbs, serving], i) =>
-      ({ id: "g" + i, name: names[li], kcal, protein, fat, carbs, serving: serving || null, source: "generic" })) };
+      ({ id: "g" + i, name: names[li], search: norm(names.join(" ")), kcal, protein, fat, carbs, serving: serving || null, source: "generic" })) };
   }
   return cache.list;
 }
@@ -111,6 +113,6 @@ export const GENERIC_ROWS = ROWS;
 
 export const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snacks"];
 /** [[key, label]] in the current language. */
-export const meals = () => MEAL_KEYS.map(k => [k, t("meal." + k)]);
+export const meals = () => MEAL_KEYS.map(k => [k, tText("meal." + k)]);
 export const DEFAULT_GOALS = { kcal: 2200, protein: 140, fat: 70, carbs: 250 };
-export function mealLabel(k) { return MEAL_KEYS.includes(k) ? t("meal." + k) : t("meal.other"); }
+export function mealLabel(k) { return MEAL_KEYS.includes(k) ? tText("meal." + k) : tText("meal.other"); }

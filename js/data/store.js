@@ -1,5 +1,5 @@
 import { changed, S } from "../state.js";
-import { t } from "../i18n.js";
+import { tText } from "../i18n.js";
 import { clean, norm, uid2 } from "../util.js";
 
 /* ---------- Data layer: IndexedDB on this device ---------- */
@@ -81,7 +81,7 @@ export const Data = {
     return { app: "yummer", version: 1, exportedAt: new Date().toISOString(), goals: await IDB.get("kv", "goals") || null, foods: await IDB.all("foods"), entries: await IDB.all("entries") };
   },
   async importAll(d) {
-    if (!d || d.app !== "yummer" || !Array.isArray(d.entries) || !Array.isArray(d.foods)) throw new Error(t("backup.notYummer"));
+    if (!d || d.app !== "yummer" || !Array.isArray(d.entries) || !Array.isArray(d.foods)) throw new Error(tText("backup.notYummer"));
     const foods = d.foods.map(sanitizeFood).filter(Boolean), entries = d.entries.map(sanitizeEntry).filter(Boolean);
     const goals = sanitizeGoals(d.goals);
     await IDB.putMany({ foods, entries });   // one transaction: all records land, or none do

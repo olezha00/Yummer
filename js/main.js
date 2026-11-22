@@ -1,5 +1,5 @@
 import { applyStaticText, bindEvents } from "./actions.js";
-import { setLang, t } from "./i18n.js";
+import { setLang, tText } from "./i18n.js";
 import { DEFAULT_GOALS } from "./data/foods.js";
 import { IDB, sanitizeGoals, watchDay } from "./data/store.js";
 import { AI } from "./services/ai.js";
@@ -19,7 +19,7 @@ async function init() {
     S.foods = await IDB.all("foods");
     await watchDay();
   } catch (e) {
-    S.mode = "error"; S.error = t("app.storageError", { msg: e && e.message || e }); render();
+    S.mode = "error"; S.error = tText("app.storageError", { msg: e && e.message || e }); render();
   }
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 }

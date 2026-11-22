@@ -1,4 +1,4 @@
-import { locale, t } from "./i18n.js";
+import { locale, tText } from "./i18n.js";
 
 /* ---------- Helpers ---------- */
 export const $ = (s, r = document) => r.querySelector(s);
@@ -12,7 +12,7 @@ export const shift = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n
 export const today = () => dkey(new Date());
 export function dateLabel(k) {
   const td = today();
-  if (k === td) return t("day.today"); if (k === shift(td, -1)) return t("day.yesterday"); if (k === shift(td, 1)) return t("day.tomorrow");
+  if (k === td) return tText("day.today"); if (k === shift(td, -1)) return tText("day.yesterday"); if (k === shift(td, 1)) return tText("day.tomorrow");
   return fromKey(k).toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
 }
 export const scale = (f, g) => ({ kcal: f.kcal * g / 100, protein: f.protein * g / 100, fat: f.fat * g / 100, carbs: f.carbs * g / 100 });
