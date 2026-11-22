@@ -1,4 +1,3 @@
-import { testKey } from "../actions.js";
 import { DEFAULT_GOALS, MEALS } from "../data/foods.js";
 import { AI } from "../services/ai.js";
 import { S } from "../state.js";
@@ -53,7 +52,7 @@ export function viewFoods() {
 }
 
 export function viewSettings() {
-  const masked = AI.key ? AI.key.slice(0, 10) + "…" + AI.key.slice(-4) : "";
+  const masked = AI.key ? AI.key.slice(0, 4) + "…" + AI.key.slice(-4) : "";
   return viewGoals() + `
   <div class="section-title" style="margin-top:22px">ИИ</div>
   <form class="card stack" id="keyForm">
@@ -66,7 +65,7 @@ export function viewSettings() {
       ? `<p class="small muted" style="margin:0">Бесплатный ключ: aistudio.google.com → Get API key. На бесплатном тарифе есть дневной лимит запросов, и Google может использовать запросы для улучшения своих моделей.</p>`
       : `<p class="small muted" style="margin:0">Платно, примерно несколько центов в день. Ключ: console.anthropic.com → API Keys.</p>`}
     ${AI.key ? `<p class="small" style="margin:0">Сейчас: <span class="keybox">${esc(masked)}</span></p>` : ""}
-    <div class="field"><label for="k-key">${AI.key ? "Заменить ключ" : "Ключ " + AI.label()}</label><input id="k-key" type="text" class="keybox" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${AI.provider === "gemini" ? "AIza…" : "sk-ant-…"}"></div>
+    <div class="field"><label for="k-key">${AI.key ? "Заменить ключ" : "Ключ " + AI.label()}</label><input id="k-key" type="password" class="keybox" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${AI.provider === "gemini" ? "AIza…" : "sk-ant-…"}"></div>
     ${AI.provider === "gemini" ? `<div class="field"><label for="k-model">Модель Gemini</label><input id="k-model" type="text" class="keybox" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(AI.geminiModel)}"></div>` : ""}
     <div class="grid2"><button class="btn primary" type="submit">Сохранить</button>${AI.key ? `<button class="btn" type="button" data-act="testKey">Проверить</button>` : ""}</div>
     ${AI.key ? `<button class="btn danger" type="button" data-act="${S.confirmKeyDel ? "delKey" : "askDelKey"}">${S.confirmKeyDel ? "Нажмите ещё раз, чтобы удалить ключ" : "Удалить ключ"}</button>` : ""}

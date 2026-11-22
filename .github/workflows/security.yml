@@ -16,6 +16,8 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
       - uses: github/codeql-action/init@d2aacf54c2fbc910db8d7ec338fdb54ea48c692d # v3
         with:
           languages: javascript-typescript
@@ -28,9 +30,13 @@ jobs:
     name: Semgrep (OWASP Top 10 rules)
     runs-on: ubuntu-latest
     container:
-      image: semgrep/semgrep
+      # Pinned by digest (supply chain). Dependabot does not update images in workflow files; bump by hand.
+      image: semgrep/semgrep:1.185.0@sha256:67518c174185a2043fdbed16c70631b79209499b3671178e7194379b48295a0d
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      # The rule packs are fetched fresh on purpose so new OWASP rules apply without a change here.
       - run: semgrep scan --config p/owasp-top-ten --config p/javascript --config p/secrets --exclude vendor --error --metrics off
   secrets:
     name: Secret scan (gitleaks)
@@ -39,6 +45,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

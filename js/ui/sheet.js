@@ -1,4 +1,3 @@
-import { runAI } from "../actions.js";
 import { GENERIC, MEALS, mealLabel } from "../data/foods.js";
 import { AI } from "../services/ai.js";
 import { S, ui } from "../state.js";
@@ -46,7 +45,7 @@ export function sheetSearch(s) {
     <button class="tool" data-act="labelPhoto">${ICON.label}Фото этикетки</button>
     <button class="tool" data-act="toAI">${ICON.ai}Описать словами</button></div>`;
   let list = "";
-  const row = f => `<button class="item" data-act="pick" data-src="${f.source}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.source === "generic" ? '<span class="tag">базовый</span>' : f.source === "recent" ? '<span class="tag">недавнее</span>' : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
+  const row = f => `<button class="item" data-act="pick" data-src="${esc(f.source)}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.source === "generic" ? '<span class="tag">базовый</span>' : f.source === "recent" ? '<span class="tag">недавнее</span>' : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
     <div class="sub num">${f.brand ? esc(f.brand) + " · " : ""}${Math.round(f.kcal)} ккал / 100 г · ${dots(f)}</div></div></button>`;
   if (results) list = results.length ? `<div class="results">${results.map(row).join("")}</div>` :
     `<div class="empty">По запросу «${esc(s.q)}» ничего не найдено. Попробуйте «Описать словами» или <button class="btn" data-act="newFood" style="padding:4px 10px">создайте продукт</button></div>`;

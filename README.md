@@ -15,6 +15,7 @@ Plain HTML, CSS and JavaScript modules. There is no build step: GitHub Pages ser
 ```
 index.html            page markup and script tags
 css/styles.css        all styles; colours are tokens with a dark theme
+css/fonts.css         self-hosted Onest and Inter (no request to Google Fonts)
 js/main.js            entry point: opens storage, loads settings, wires events, first render
 js/state.js           shared app state (S) and the open bottom sheet (ui.sheet)
 js/util.js            small pure helpers: dates, rounding, escaping, text normalising
@@ -28,6 +29,7 @@ js/ui/views.js        diary, my foods and settings screens
 js/ui/sheet.js        bottom sheets: search, amount, describe-a-meal, food form
 sw.js                 service worker: the app opens offline
 vendor/               pinned copies of @anthropic-ai/sdk 1.7.0 and @zxing/library 0.21.3
+fonts/                Onest and Inter woff2 files (SIL Open Font License)
 tests/                unit tests for the pure helpers (node --test)
 ```
 

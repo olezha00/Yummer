@@ -23,18 +23,19 @@ export function offErrorText(e) {
 }
 export const n1 = v => (v == null || v === "" || isNaN(+v)) ? null : Math.round(+v * 10) / 10;
 export function offToFood(x) {
-  if (!x) return null;
+  const code = x && String(x.code ?? "");
+  if (!code || !/^\d{6,14}$/.test(code)) return null;   // hits without a real barcode are skipped
   const n = x.nutriments || {};
   let kcal = n1(n["energy-kcal_100g"]); if (kcal == null && n["energy-kj_100g"] != null) kcal = n1(n["energy-kj_100g"] / 4.184);
   const name = String(x.product_name_ru || x.product_name_pl || x.product_name || "").trim();
   const brand = (Array.isArray(x.brands) ? x.brands[0] : String(x.brands || "").split(",")[0] || "").trim() || null;
-  const f = { id: String(x.code), barcode: String(x.code), name, brand, kcal, protein: n1(n.proteins_100g), fat: n1(n.fat_100g), carbs: n1(n.carbohydrates_100g), serving: n1(x.serving_quantity), source: "off" };
+  const f = { id: code, barcode: code, name, brand, kcal, protein: n1(n.proteins_100g), fat: n1(n.fat_100g), carbs: n1(n.carbohydrates_100g), serving: n1(x.serving_quantity), source: "off" };
   return f;
 }
 export const offComplete = f => f && f.name && [f.kcal, f.protein, f.fat, f.carbs].every(v => v != null);
 export async function offByBarcode(code) {
   const j = await browserJSON("https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(code) + ".json?fields=" + OFF_FIELDS);
-  return j && j.status === 1 ? offToFood({ code, ...j.product }) : null;
+  return j && j.status === 1 ? offToFood({ ...j.product, code }) : null;
 }
 export async function offSearchLive(q) {
   let query = q;

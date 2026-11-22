@@ -24,6 +24,26 @@ for (const f of files) {
       if (!names.has(n)) { failed = true; console.error(`${f}: "${n}" is not exported by ${m[2]}`); }
   }
 }
+// No import cycles: a module may not (directly or indirectly) import itself.
+const graph = new Map(files.map(f => [resolve(f), [...readFileSync(f, "utf8").matchAll(/^import\s+[^;]*?from\s+"(\.[^"]+)";/gm)].map(m => resolve(dirname(f), m[1]))]));
+const state = new Map();
+function visit(n, path) {
+  if (state.get(n) === "done") return;
+  if (state.get(n) === "active") { failed = true; const cyc = path.slice(path.indexOf(n)).concat(n).map(p => p.slice(process.cwd().length + 1)); console.error("Import cycle: " + cyc.join(" -> ")); return; }
+  state.set(n, "active");
+  for (const m of graph.get(n) || []) visit(m, [...path, n]);
+  state.set(n, "done");
+}
+for (const n of graph.keys()) visit(n, []);
+
+// Every shipped file must be cached by the service worker, or the app breaks offline.
+const sw = readFileSync("sw.js", "utf8");
+const shell = new Set([...sw.slice(sw.indexOf("SHELL"), sw.indexOf("];")).matchAll(/"([^"]+)"/g)].map(m => m[1]));
+const shipped = [...files, "css/styles.css", "css/fonts.css",
+  ...readdirSync("fonts").filter(f => f.endsWith(".woff2")).map(f => "fonts/" + f),
+  ...readdirSync("vendor").filter(f => f.endsWith(".js")).map(f => "vendor/" + f)];
+for (const f of shipped) if (!shell.has(f.split("\\").join("/"))) { failed = true; console.error(`${f} is not listed in SHELL in sw.js`); }
+
 // Vendored libraries must match their recorded checksums (supply-chain integrity).
 import("node:crypto").then(({ createHash }) => {
   for (const line of readFileSync("vendor/SHA256SUMS", "utf8").trim().split("\n")) {
@@ -36,5 +56,5 @@ import("node:crypto").then(({ createHash }) => {
   if (!/http-equiv="Content-Security-Policy"/.test(html)) { failed = true; console.error("index.html lost its Content-Security-Policy"); }
   if (/<script(?![^>]*\bsrc=)[^>]*>/.test(html) || /\son[a-z]+=/i.test(html)) { failed = true; console.error("index.html has inline script or on* handler"); }
   if (failed) process.exit(1);
-  console.log(`OK: ${files.length} modules, vendor checksums and CSP checked.`);
+  console.log(`OK: ${files.length} modules, no import cycles, SHELL complete, vendor checksums and CSP checked.`);
 });

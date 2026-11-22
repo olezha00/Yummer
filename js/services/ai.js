@@ -1,4 +1,4 @@
-import { IDB } from "../data/store.js";
+import { IDB, sanitizeLabel } from "../data/store.js";
 import { blobToB64 } from "../util.js";
 
 /* ---------- AI: Google Gemini (free tier, default) or Claude, with the person's own key stored on this device ---------- */
@@ -92,5 +92,5 @@ export async function readLabel(file) {
   const img = await shrink(file);
   const out = await AI.json(LABEL_PROMPT, LABEL_SCHEMA, [img]);
   if (!out || typeof out !== "object") throw new Error("Не удалось прочитать этикетку. Сделайте более чёткое фото поближе.");
-  return out;
+  return sanitizeLabel(out);
 }

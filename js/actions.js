@@ -1,5 +1,5 @@
 import { DEFAULT_GOALS, GENERIC, mealLabel } from "./data/foods.js";
-import { Data, watchDay } from "./data/store.js";
+import { Data, sanitizeAIItem, watchDay } from "./data/store.js";
 import { AI, ITEMS_SCHEMA, readLabel, saveAISettings } from "./services/ai.js";
 import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
 import { offByBarcode, offComplete, offErrorText, offSearchLive } from "./services/off.js";
@@ -59,7 +59,7 @@ Return JSON only, no prose, exactly: {"items":[{"name":string,"grams":number,"kc
 Write food names in Russian.`;
   try {
     const out = await AI.json(prompt, ITEMS_SCHEMA);
-    const items = (out?.items || []).filter(i => i && i.name && +i.grams > 0).map(i => ({ name: String(i.name), grams: +i.grams, kcal: +i.kcal || 0, protein: +i.protein || 0, fat: +i.fat || 0, carbs: +i.carbs || 0 }));
+    const items = (Array.isArray(out?.items) ? out.items : []).slice(0, 30).map(sanitizeAIItem).filter(Boolean);
     ui.sheet.items = items; ui.sheet.busy = false;
     ui.sheet.status = items.length ? "" : "Не получилось разобрать продукты. Назовите каждый продукт и примерное количество."; ui.sheet.err = !items.length;
   } catch (e) {
@@ -109,7 +109,7 @@ export function bindEvents() {
       let code = await decodeBarcode(file);
       if (!code && AI.ready()) {
         setStatus("Полоски не распознались, просим Claude прочитать цифры…");
-        try { const r = await readLabel(file); code = r.barcode ? String(r.barcode).replace(/\D/g, "") : null; } catch {}
+        try { code = (await readLabel(file)).barcode; } catch {}
       }
       if (!code) return setStatus("Штрихкод не найден. Снимите ближе, чтобы штрихкод занимал большую часть фото, или введите цифры в поиск.", true);
       handleCode(code.trim());
@@ -121,7 +121,7 @@ export function bindEvents() {
         const r = await readLabel(file);
         const merged = { ...cur };
         for (const k of ["name", "brand", "kcal", "protein", "fat", "carbs", "serving"]) if (r[k] != null && r[k] !== "") merged[k] = r[k];
-        if (!merged.barcode && r.barcode) merged.barcode = String(r.barcode).replace(/\D/g, "");
+        if (!merged.barcode && r.barcode) merged.barcode = r.barcode;
         ui.sheet.food = merged; ui.sheet.busy = false;
         const missing = ["kcal", "protein", "fat", "carbs"].filter(k => merged[k] == null);
         ui.sheet.status = missing.length ? "Заполнено то, что удалось прочитать. Добавьте: " + missing.map(k => ({kcal:"ккал",protein:"белки",fat:"жиры",carbs:"углеводы"})[k]).join(", ") + "." : "Заполнено по этикетке. Проверьте цифры и сохраните.";
@@ -175,13 +175,11 @@ export function bindEvents() {
       case "aiDrop": ui.sheet.text = $("#aitext").value; ui.sheet.items.splice(+b.dataset.i, 1); renderSheet(); break;
       case "aiAdd": {
         const meal = ui.sheet.meal, items = ui.sheet.items; closeSheet();
-        for (const i of items) {
-          const per100 = { kcal: r1(i.kcal / i.grams * 100), protein: r1(i.protein / i.grams * 100), fat: r1(i.fat / i.grams * 100), carbs: r1(i.carbs / i.grams * 100), serving: null };
-          await safe(Data.addEntry({ date: S.date, meal, name: i.name, grams: r1(i.grams), kcal: r1(i.kcal), protein: r1(i.protein), fat: r1(i.fat), carbs: r1(i.carbs), per100, foodId: null, estimated: true }));
-        }
-        toast(`Добавлено в «${mealLabel(meal)}»: ${items.length} шт.`); break;
+        const list = items.map(i => ({ date: S.date, meal, name: i.name, grams: r1(i.grams), kcal: r1(i.kcal), protein: r1(i.protein), fat: r1(i.fat), carbs: r1(i.carbs),
+          per100: { kcal: r1(i.kcal / i.grams * 100), protein: r1(i.protein / i.grams * 100), fat: r1(i.fat / i.grams * 100), carbs: r1(i.carbs / i.grams * 100), serving: null }, foodId: null, estimated: true }));
+        await safe(Data.addEntries(list), `Добавлено в «${mealLabel(meal)}»: ${list.length} шт.`); break;
       }
-      case "scan": ui.sheet.status = ""; startScanner(); break;
+      case "scan": ui.sheet.status = ""; startScanner({ onCode: c => { if (ui.sheet) handleCode(c); }, onPhoto: () => pickPhoto("scan"), onError: msg => setStatus(msg, true) }); break;
       case "scanClose": stopScanner(); break;
       case "scanPhoto": stopScanner(); pickPhoto("scan"); break;
       case "export": doExport(); break;
@@ -259,9 +257,9 @@ export function bindEvents() {
 
   $("#importInput").addEventListener("change", async ev => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
-    const st = $("#bkStatus");
-    try { const r = await Data.importAll(JSON.parse(await f.text())); if (st) { st.className = "status"; st.textContent = "Восстановлено: " + r.entries + " записей, " + r.foods + " продуктов." + (r.skipped ? " Пропущено повреждённых записей: " + r.skipped + "." : ""); } }
-    catch (e) { if (st) { st.className = "status err"; st.textContent = e.message || "Не удалось прочитать файл."; } }
+    // Look the status line up after the import: the import re-renders Settings and replaces the element.
+    try { const r = await Data.importAll(JSON.parse(await f.text())); const st = $("#bkStatus"); if (st) { st.className = "status"; st.textContent = "Восстановлено: " + r.entries + " записей, " + r.foods + " продуктов." + (r.skipped ? " Пропущено повреждённых записей: " + r.skipped + "." : ""); } }
+    catch (e) { const st = $("#bkStatus"); if (st) { st.className = "status err"; st.textContent = e.message || "Не удалось прочитать файл."; } }
   });
   window.addEventListener("online", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });
   window.addEventListener("offline", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });

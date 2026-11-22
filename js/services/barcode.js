@@ -1,6 +1,3 @@
-import { handleCode, pickPhoto } from "../actions.js";
-import { ui } from "../state.js";
-import { setStatus } from "../ui/sheet.js";
 import { $ } from "../util.js";
 
 /* ---------- Barcode decoding from a photo ---------- */
@@ -27,8 +24,10 @@ export async function decodeBarcode(file) {
 
 /* ---------- Live camera scanner ---------- */
 export let scanReader = null;
-export async function startScanner() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.ZXing) { pickPhoto("scan"); return; }
+/** Opens the camera overlay. Callbacks keep this module free of UI imports:
+ *  onCode(text) when a code is read, onPhoto() to fall back to a photo, onError(message). */
+export async function startScanner({ onCode, onPhoto, onError }) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.ZXing) { onPhoto(); return; }
   const box = $("#scanner"), video = $("#scanVideo"); box.hidden = false; $("#scanHint").textContent = "Наведите камеру на штрихкод";
   try {
     const hints = new Map();
@@ -38,12 +37,12 @@ export async function startScanner() {
     await scanReader.decodeFromConstraints({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } }, video, (result) => {
       if (!result || done) return; done = true;
       try { navigator.vibrate && navigator.vibrate(60); } catch {}
-      stopScanner(); if (ui.sheet) handleCode(result.getText().trim());
+      stopScanner(); onCode(result.getText().trim());
     });
   } catch (e) {
     stopScanner();
-    setStatus(e && e.name === "NotAllowedError" ? "Нет доступа к камере. Разрешите камеру для Yummer в настройках Safari, или сделайте фото штрихкода." : "Камера недоступна, откроем фото.", true);
-    if (!(e && e.name === "NotAllowedError")) pickPhoto("scan");
+    onError(e && e.name === "NotAllowedError" ? "Нет доступа к камере. Разрешите камеру для Yummer в настройках Safari, или сделайте фото штрихкода." : "Камера недоступна, откроем фото.");
+    if (!(e && e.name === "NotAllowedError")) onPhoto();
   }
 }
 export function stopScanner() { try { scanReader && scanReader.reset(); } catch {} scanReader = null; $("#scanner").hidden = true; }
