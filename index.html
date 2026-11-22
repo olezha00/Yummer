@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Yummer</title>
+<meta name="theme-color" content="#f5f7f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111613" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Yummer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one phone-width column; sticky date bar, summary dial, meal lists, bottom tab bar; sheets slide up for adding food. */
+:root {
+  --bg: #f5f7f4;
+  --surface: #ffffff;
+  --sunk: #eaeee8;
+  --fg: #18211d;
+  --muted: #5f6b64;
+  --line: #d9dfd8;
+  --accent: #1f6b55;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcebe4;
+  --protein: #c2414b;
+  --fat: #d49a1f;
+  --carbs: #3d6fb6;
+  --warn: #b5462f;
+  --display: "Onest", "Avenir Next", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111613; --surface: #1a211d; --sunk: #232c27; --fg: #e8eee9; --muted: #9aa69f; --line: #2e3833;
+  --accent: #5fbf9b; --accent-ink: #0d1a14; --accent-soft: #1f3a30; --protein: #ec7179; --fat: #e9b84c; --carbs: #79a5e8; --warn: #ec8a73;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111613; --surface: #1a211d; --sunk: #232c27; --fg: #e8eee9; --muted: #9aa69f; --line: #2e3833;
+  --accent: #5fbf9b; --accent-ink: #0d1a14; --accent-soft: #1f3a30; --protein: #ec7179; --fat: #e9b84c; --carbs: #79a5e8; --warn: #ec8a73;
+  color-scheme: dark }
+
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); }
+html, body { margin: 0; }
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--body); font-size: 15px; line-height: 1.45; -webkit-tap-highlight-color: transparent; }
+button, input, select { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+.wrap { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 96px; }
+
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 12px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.brand { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em; }
+.datenav { display: flex; align-items: center; gap: 4px; }
+.datenav button { border: 0; background: var(--sunk); width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 18px; line-height: 1; }
+.datenav .label { min-width: 104px; text-align: center; font-weight: 600; font-size: 14px; }
+
+.banner { background: var(--accent-soft); border-radius: var(--r); padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+.banner.warn { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); }
+
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: grid; grid-template-columns: 132px 1fr; gap: 18px; align-items: center; }
+.dial { position: relative; width: 132px; height: 132px; }
+.dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.dial .center { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.dial .big { font-family: var(--display); font-size: 30px; font-weight: 700; line-height: 1; }
+.dial .small { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; }
+.macros { display: grid; gap: 10px; min-width: 0; }
+.macro .row { display: flex; justify-content: space-between; font-size: 13px; gap: 6px; }
+.macro .row b { font-weight: 600; }
+.macro .row span { color: var(--muted); }
+.bar { height: 7px; background: var(--sunk); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+.bar i { display: block; height: 100%; border-radius: 99px; }
+.kcalline { grid-column: 1 / -1; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+.kcalline b { color: var(--fg); font-weight: 600; }
+
+.meal { margin-top: 18px; }
+.meal h2 { font-family: var(--display); font-size: 18px; font-weight: 700; margin: 0; }
+.meal .mhead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.meal .mk { color: var(--muted); font-size: 13px; }
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 0; border-bottom: 1px solid var(--line); background: none; width: 100%; text-align: left; cursor: pointer; }
+.item:last-child { border-bottom: 0; }
+.item .main { flex: 1; min-width: 0; }
+.item .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .sub { font-size: 12px; color: var(--muted); }
+.item .kc { font-weight: 600; font-size: 14px; white-space: nowrap; }
+.dots { display: inline-flex; gap: 8px; }
+.dots i { font-style: normal; }
+.dots i::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 3px; background: currentColor; vertical-align: 1px; }
+.dots .p::before { background: var(--protein); } .dots .f::before { background: var(--fat); } .dots .c::before { background: var(--carbs); }
+.addrow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 14px; border: 0; background: none; color: var(--accent); font-weight: 600; cursor: pointer; text-align: left; }
+.addrow::before { content: "+"; font-size: 20px; line-height: 1; }
+
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line); display: flex; justify-content: center; padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+nav.tabs .in { display: flex; width: 100%; max-width: 560px; }
+nav.tabs button { flex: 1; border: 0; background: none; padding: 10px 0 12px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border-top: 3px solid transparent; }
+nav.tabs button[aria-current="page"] { color: var(--accent); border-top-color: var(--accent); }
+
+.section-title { font-family: var(--display); font-size: 20px; font-weight: 700; margin: 6px 0 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+input[type=text], input[type=number], input[type=search], select, textarea {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-size: 16px; }
+textarea { font: inherit; font-size: 16px; color: inherit; resize: vertical; min-height: 84px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.btn { border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 600; cursor: pointer; background: var(--sunk); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.danger { background: none; color: var(--warn); }
+.btn.block { width: 100%; }
+.btn:disabled { opacity: .55; cursor: default; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.stack { display: grid; gap: 12px; }
+.empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+
+/* Sheet */
+.scrim { position: fixed; inset: 0; background: rgb(0 0 0 / .38); z-index: 20; }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; display: flex; justify-content: center; }
+.sheet .panel { background: var(--surface); width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.sheet .grab { width: 40px; height: 4px; border-radius: 4px; background: var(--line); margin: 0 auto 10px; }
+.sheet h3 { font-family: var(--display); font-size: 20px; margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sheet h3 button { border: 0; background: var(--sunk); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 16px; }
+.tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.tool { border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 10px 6px; display: grid; justify-items: center; gap: 4px; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; }
+.tool svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.results .item { padding-inline: 4px; }
+.tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 2px 6px; border-radius: 6px; background: var(--sunk); color: var(--muted); margin-left: 6px; vertical-align: 1px; }
+.preview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; background: var(--bg); border-radius: 12px; padding: 10px 4px; }
+.preview b { display: block; font-size: 17px; font-weight: 600; }
+.preview span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.seg { display: flex; background: var(--sunk); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { flex: 1; border: 0; background: none; padding: 8px 4px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); }
+.status { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+.status.err { color: var(--warn); }
+.aiitems .item { cursor: default; }
+@media (max-width: 380px) { .summary { grid-template-columns: 1fr; justify-items: center; } .macros { width: 100%; } }
+@media (prefers-reduced-motion: no-preference) { .sheet .panel { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(24px); opacity: .6; } } }
+/* Scanner */
+.scanner { position: fixed; inset: 0; z-index: 40; background: #000; display: flex; flex-direction: column; }
+.scanner video { flex: 1; width: 100%; height: 100%; object-fit: cover; min-height: 0; }
+.scanner .frame { position: absolute; left: 10%; right: 10%; top: 38%; height: 22%; border: 3px solid rgb(255 255 255 / .9); border-radius: 16px; box-shadow: 0 0 0 9999px rgb(0 0 0 / .35); pointer-events: none; }
+.scanner .bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; background: linear-gradient(transparent, rgb(0 0 0 / .7)); }
+.scanner .hint { color: #fff; text-align: center; font-size: 14px; }
+.scanner .btn { background: rgb(255 255 255 / .92); color: #111; }
+.keybox { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app">
+  <header class="top"><div class="brand">Yummer</div></header>
+  <p class="muted">Загружаем дневник…</p>
+</div>
+<div id="sheetRoot"></div>
+<input type="file" id="camInput" accept="image/*" capture="environment" hidden>
+<input type="file" id="importInput" accept="application/json,.json" hidden>
+<div class="scanner" id="scanner" hidden>
+  <video id="scanVideo" playsinline muted autoplay></video>
+  <div class="frame"></div>
+  <div class="bar">
+    <div class="hint" id="scanHint">Наведите камеру на штрихкод</div>
+    <button class="btn block" data-act="scanPhoto">Сделать фото вместо этого</button>
+    <button class="btn block" data-act="scanClose">Отмена</button>
+  </div>
+</div>
+
+<script src="vendor/zxing.min.js"></script>
+<script type="module">
+  import Anthropic from "./vendor/anthropic.js";
+  window.__Anthropic = Anthropic;
+  window.dispatchEvent(new Event("anthropic-ready"));
+</script>
+<script>
+(() => {
+"use strict";
+
+/* ---------- Built-in generic foods (values per 100 g) ---------- */
+const GENERIC = [
+  ["Куриная грудка, сырая",110,23,1.2,0],["Куриная грудка, гриль",165,31,3.6,0],["Куриное бедро, сырое",177,17.3,11.8,0],
+  ["Индейка, грудка, сырая",104,22.6,1.2,0],["Свиная корейка, сырая",143,21,6.3,0],["Говяжий фарш постный 5%",137,21,5,0],["Говяжий фарш 15%",215,18.6,15,0],
+  ["Лосось, сырой",208,20,13,0],["Треска, сырая",82,18,0.7,0],["Тунец в собственном соку",116,26,1,0],["Скумбрия копчёная",305,19,25,0],["Сельдь в масле",262,15,22,1],
+  ["Яйцо куриное",143,12.6,9.5,0.7,60],["Яичный белок",52,10.9,0.2,0.7],["Ветчина варёная (szynka)",110,18,3.5,1.5],["Кабанос",470,25,40,2],["Сосиски (parówki)",250,12,22,2],
+  ["Творог полужирный (twaróg)",133,18.7,4.7,3.7],["Творог обезжиренный",99,19.8,0.5,3.5],["Зернёный творог (serek wiejski)",97,11,5,2],["Скир натуральный",62,11,0,4],
+  ["Греческий йогурт 10%",133,3.8,10,4],["Йогурт натуральный 2%",60,4.3,2,6],["Кефир 2%",51,3.4,2,4.7],["Молоко 2%",50,3.4,2,4.8],["Молоко 3,2%",61,3.2,3.2,4.7],
+  ["Сыр гауда",356,25,27.4,2.2],["Моцарелла",254,18,19,2],["Фета",264,14,21,4],["Сливочное масло",735,0.7,81,0.7],["Сметана 18% (śmietana)",186,2.5,18,3.6],
+  ["Овсяные хлопья",379,13.2,6.5,60,40],["Ржаной хлеб",259,8.5,3.3,48,35],["Цельнозерновой хлеб",247,13,4.2,41,35],["Белый хлеб / булка",265,9,3.2,49,50],
+  ["Рис белый, сухой",360,7,0.6,79],["Рис белый, варёный",130,2.7,0.3,28],["Рис бурый, сухой",362,7.5,2.7,76],["Макароны, сухие",371,13,1.5,75],["Макароны, варёные",158,5.8,0.9,31],
+  ["Гречка, сухая (kasza gryczana)",343,13,3.4,71.5],["Гречка, варёная",92,3.4,0.6,20],["Пшено, сухое (kasza jaglana)",378,11,4.2,73],["Кускус, сухой",376,12.8,0.6,77],
+  ["Картофель отварной",87,1.9,0.1,20],["Батат запечённый",90,2,0.2,21],["Вареники с картошкой (pierogi ruskie)",205,6,6,31],["Блины (naleśniki)",227,6.4,9.7,28],
+  ["Чечевица красная, сухая",358,24,2,60],["Нут консервированный",139,7,2.6,22],["Фасоль консервированная",115,7.5,0.5,21],["Тофу твёрдый",144,15.8,8.7,2.8],
+  ["Банан",89,1.1,0.3,22.8,120],["Яблоко",52,0.3,0.2,13.8,180],["Груша",57,0.4,0.1,15],["Апельсин",47,0.9,0.1,11.8,150],["Клубника",32,0.7,0.3,7.7],
+  ["Черника",57,0.7,0.3,14.5],["Малина",52,1.2,0.7,12],["Виноград",69,0.7,0.2,18],["Сливы",46,0.7,0.3,11.4],
+  ["Помидор",18,0.9,0.2,3.9,120],["Огурец",15,0.7,0.1,3.6],["Перец болгарский",31,1,0.3,6],["Морковь",41,0.9,0.2,9.6],["Брокколи",34,2.8,0.4,6.6],
+  ["Капуста белокочанная",25,1.3,0.1,5.8],["Квашеная капуста (kiszona)",19,0.9,0.1,4.3],["Огурец квашеный (ogórek kiszony)",12,0.6,0.1,2.2],["Лук репчатый",40,1.1,0.1,9.3],
+  ["Салат листовой / микс",15,1.4,0.2,2.9],["Шпинат",23,2.9,0.4,3.6],["Свёкла варёная",44,1.7,0.2,10],["Шампиньоны (pieczarki)",22,3.1,0.3,3.3],["Авокадо",160,2,14.7,8.5],
+  ["Оливковое масло",884,0,100,0],["Рапсовое масло",884,0,100,0],["Арахисовая паста",588,25,50,20],["Миндаль",579,21,50,22],["Грецкие орехи",654,15,65,14],
+  ["Семечки подсолнечника",584,21,51,20],["Тёмный шоколад 70%",598,7.8,43,46],["Мёд",304,0.3,0,82],["Сахар",400,0,0,100],["Хумус",166,7.9,9.6,14],
+  ["Кетчуп",112,1.3,0.2,26],["Майонез",680,1,75,0.6],["Апельсиновый сок",45,0.7,0.2,10.4],["Пиво 5%",43,0.5,0,3.6],["Кофе с молоком (латте)",54,3.4,2.9,4.6]
+].map((r,i) => ({ id: "g" + i, name: r[0], kcal: r[1], protein: r[2], fat: r[3], carbs: r[4], serving: r[5] || null, source: "generic" }));
+
+/* ---------- Open Food Facts: direct API calls ---------- */
+const OFFAPI = { available: true };
+const OFF_FIELDS = "code,product_name,product_name_pl,product_name_ru,brands,nutriments,serving_quantity";
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function browserJSON(url) {
+  if (!navigator.onLine) throw Object.assign(new Error("Нет интернета. Поиск в Open Food Facts недоступен."), { code: "offline" });
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 15000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { Accept: "application/json" } });
+    if (r.status === 404) return null;
+    if (!r.ok) throw Object.assign(new Error("Open Food Facts ответил ошибкой " + r.status + ". Попробуйте ещё раз."), { code: "http" });
+    return await r.json();
+  } catch (e) {
+    if (e.name === "AbortError") throw Object.assign(new Error("Open Food Facts не ответил вовремя. Попробуйте ещё раз."), { code: "timeout" });
+    throw e;
+  } finally { clearTimeout(t); }
+}
+function offErrorText(e) {
+  return (e && e.message && /[а-яё]/i.test(e.message)) ? e.message : "Не удалось связаться с Open Food Facts. Проверьте интернет и попробуйте ещё раз.";
+}
+const n1 = v => (v == null || v === "" || isNaN(+v)) ? null : Math.round(+v * 10) / 10;
+function offToFood(x) {
+  if (!x) return null;
+  const n = x.nutriments || {};
+  let kcal = n1(n["energy-kcal_100g"]); if (kcal == null && n["energy-kj_100g"] != null) kcal = n1(n["energy-kj_100g"] / 4.184);
+  const name = String(x.product_name_ru || x.product_name_pl || x.product_name || "").trim();
+  const brand = (Array.isArray(x.brands) ? x.brands[0] : String(x.brands || "").split(",")[0] || "").trim() || null;
+  const f = { id: String(x.code), barcode: String(x.code), name, brand, kcal, protein: n1(n.proteins_100g), fat: n1(n.fat_100g), carbs: n1(n.carbohydrates_100g), serving: n1(x.serving_quantity), source: "off" };
+  return f;
+}
+const offComplete = f => f && f.name && [f.kcal, f.protein, f.fat, f.carbs].every(v => v != null);
+async function offByBarcode(code) {
+  const j = await browserJSON("https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(code) + ".json?fields=" + OFF_FIELDS);
+  return j && j.status === 1 ? offToFood({ code, ...j.product }) : null;
+}
+async function offSearchLive(q) {
+  let query = q;
+  if (/[а-яё]/i.test(q) && AI.ready()) {
+    try { const t = await AI.text("Translate this food search query into Polish as it would appear on a product label in a Polish shop. Reply with the Polish words only, nothing else: " + q); if (t) query = t.trim().replace(/^["«]|["»]$/g, "").slice(0, 80); } catch {}
+  }
+  const url = "https://search.openfoodfacts.org/search?q=" + encodeURIComponent(query + ' countries_tags:"en:poland"') + "&page_size=25&langs=pl,en&fields=" + OFF_FIELDS;
+  const j = await browserJSON(url);
+  return { query, items: ((j && j.hits) || []).map(offToFood).filter(offComplete) };
+}
+
+const MEALS = [["breakfast","Завтрак"],["lunch","Обед"],["dinner","Ужин"],["snacks","Перекусы"]];
+const DEFAULT_GOALS = { kcal: 2200, protein: 140, fat: 70, carbs: 250 };
+
+/* ---------- Helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const r1 = n => Math.round((+n || 0) * 10) / 10;
+const fm = n => { n = +n || 0; return n >= 10 ? String(Math.round(n)) : String(r1(n)); };
+const pad = n => String(n).padStart(2, "0");
+const dkey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const fromKey = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y, m - 1, d); };
+const shift = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return dkey(d); };
+const today = () => dkey(new Date());
+function dateLabel(k) {
+  const t = today();
+  if (k === t) return "Сегодня"; if (k === shift(t, -1)) return "Вчера"; if (k === shift(t, 1)) return "Завтра";
+  return fromKey(k).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" });
+}
+const scale = (f, g) => ({ kcal: f.kcal * g / 100, protein: f.protein * g / 100, fat: f.fat * g / 100, carbs: f.carbs * g / 100 });
+const uidLocal = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l");
+
+/* ---------- State ---------- */
+const S = {
+  mode: "loading", // loading | db | local | error
+  tab: "diary",
+  date: today(),
+  goals: { ...DEFAULT_GOALS },
+  foods: [],
+  entries: [],
+  sample: null, imagesOK: false,
+};
+
+/* ---------- AI: Google Gemini (free tier, default) or Claude, with the person's own key stored on this device ---------- */
+const CLAUDE_MODEL = "claude-opus-5-5";
+const AI = {
+  provider: "gemini", keys: { gemini: null, claude: null }, geminiModel: "gemini-3.5-flash-lite",
+  get key() { return this.keys[this.provider]; },
+  ready() { return !!this.key; },
+  label() { return this.provider === "gemini" ? "Gemini" : "Claude"; },
+  async call(text, images, wantJSON, schema) {
+    if (!this.key) throw Object.assign(new Error("Добавьте ключ " + this.label() + " в «Настройках», чтобы пользоваться ИИ."), { code: "nokey" });
+    if (!navigator.onLine) throw Object.assign(new Error("Нет интернета."), { code: "offline" });
+    const b64 = []; for (const img of images || []) b64.push(await blobToB64(img));
+    return this.provider === "gemini" ? this.gemini(text, b64, wantJSON) : this.claude(text, b64, schema);
+  },
+  async gemini(text, b64, wantJSON) {
+    const parts = b64.map(d => ({ inline_data: { mime_type: "image/jpeg", data: d } })); parts.push({ text });
+    let r;
+    try {
+      r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(this.geminiModel) + ":generateContent", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": this.key },
+        body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: wantJSON ? { responseMimeType: "application/json" } : {} }) });
+    } catch { throw Object.assign(new Error("Не удалось связаться с Gemini. Попробуйте ещё раз."), { code: "net" }); }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const msg = (j.error && j.error.message) || "";
+      if (r.status === 429) throw Object.assign(new Error("Бесплатный лимит Gemini на сейчас исчерпан. Подождите минуту (или до завтра, если кончился дневной лимит)."), { code: "rate" });
+      if (r.status === 404) throw Object.assign(new Error("Модель «" + this.geminiModel + "» не найдена. Укажите другую модель в «Настройках»."), { code: "model" });
+      if (r.status === 400 && /api key/i.test(msg) || r.status === 401 || r.status === 403) throw Object.assign(new Error("Ключ Gemini не подошёл. Проверьте его в «Настройках»."), { code: "auth" });
+      throw Object.assign(new Error("Gemini вернул ошибку " + r.status + (msg ? ": " + msg : "")), { code: "bad" });
+    }
+    const c = j.candidates && j.candidates[0];
+    const out = c && c.content && (c.content.parts || []).map(x => x.text || "").join("");
+    if (!out) throw Object.assign(new Error("Gemini не дал ответа" + (c && c.finishReason ? " (" + c.finishReason + ")" : "") + ". Попробуйте ещё раз."), { code: "empty" });
+    return out;
+  },
+  async claude(text, b64, schema) {
+    if (!window.__Anthropic) await new Promise(r => window.addEventListener("anthropic-ready", r, { once: true }));
+    const client = new window.__Anthropic({ apiKey: this.key, dangerouslyAllowBrowser: true, maxRetries: 1 });
+    const content = b64.map(d => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: d } })); content.push({ type: "text", text });
+    let res;
+    try {
+      res = await client.beta.messages.create({
+        model: CLAUDE_MODEL, max_tokens: 4000,
+        betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+        output_config: schema ? { effort: "low", format: { type: "json_schema", schema } } : { effort: "low" },
+        messages: [{ role: "user", content }],
+      });
+    } catch (e) {
+      const st = e && e.status;
+      if (st === 401) throw Object.assign(new Error("Ключ Claude не подошёл. Проверьте его в «Настройках»."), { code: "auth" });
+      if (st === 429) throw Object.assign(new Error("Слишком много запросов. Подождите минуту и попробуйте снова."), { code: "rate" });
+      if (st === 400) throw Object.assign(new Error("Запрос не принят: " + (e.message || "")), { code: "bad" });
+      throw Object.assign(new Error("Не удалось связаться с Claude. Попробуйте ещё раз."), { code: "net" });
+    }
+    if (res.stop_reason === "refusal") throw Object.assign(new Error("Claude отказался обработать этот запрос."), { code: "refusal" });
+    return res.content.filter(b => b.type === "text").map(b => b.text).join("");
+  },
+  async text(prompt) { return this.call(prompt, [], false); },
+  async json(prompt, schema, images) {
+    const t = await this.call(prompt, images, true, schema);
+    const x = t.indexOf("{"), y = t.lastIndexOf("}");
+    return JSON.parse(x >= 0 ? t.slice(x, y + 1) : t);
+  },
+};
+async function saveAISettings() { await IDB.put("kv", { provider: AI.provider, keys: AI.keys, geminiModel: AI.geminiModel }, "ai"); }
+function blobToB64(blob) { return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(",")[1]); fr.onerror = rej; fr.readAsDataURL(blob); }); }
+
+/* ---------- Data layer: IndexedDB on this device ---------- */
+const IDB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const rq = indexedDB.open("yummer", 1);
+      rq.onupgradeneeded = () => {
+        const d = rq.result;
+        const en = d.createObjectStore("entries", { keyPath: "id" }); en.createIndex("date", "date"); en.createIndex("createdAt", "createdAt");
+        d.createObjectStore("foods", { keyPath: "id" });
+        d.createObjectStore("kv");
+      };
+      rq.onsuccess = () => { this.db = rq.result; res(); };
+      rq.onerror = () => rej(rq.error);
+    });
+  },
+  tx(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode); const st = t.objectStore(store); let out;
+      const r = fn(st); if (r) r.onsuccess = () => { out = r.result; };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  all(store) { return this.tx(store, "readonly", st => st.getAll()); },
+  byDate(date) { return this.tx("entries", "readonly", st => st.index("date").getAll(date)); },
+  put(store, v, key) { return this.tx(store, "readwrite", st => key === undefined ? st.put(v) : st.put(v, key)); },
+  get(store, key) { return this.tx(store, "readonly", st => st.get(key)); },
+  del(store, key) { return this.tx(store, "readwrite", st => st.delete(key)); },
+  clear(store) { return this.tx(store, "readwrite", st => st.clear()); },
+};
+const uid2 = () => (crypto.randomUUID ? crypto.randomUUID() : uidLocal());
+function clean(o) { const out = {}; for (const [k, v] of Object.entries(o)) if (v !== undefined) out[k] = v; return out; }
+async function reloadFoods() { S.foods = await IDB.all("foods"); render(); }
+async function watchDay() { const d = S.date; const list = await IDB.byDate(d); if (S.date === d) { S.entries = list; render(); } }
+
+const Data = {
+  async saveGoals(g) { S.goals = g; S.goalsSet = true; await IDB.put("kv", g, "goals"); render(); },
+  async addFood(f) { const id = uid2(); await IDB.put("foods", clean({ ...f, id, createdAt: Date.now() })); await reloadFoods(); return id; },
+  async updateFood(id, f) { const cur = await IDB.get("foods", id); await IDB.put("foods", clean({ ...cur, ...f, id })); await reloadFoods(); },
+  async deleteFood(id) { await IDB.del("foods", id); await reloadFoods(); },
+  async addEntry(e) { await IDB.put("entries", clean({ ...e, id: uid2(), createdAt: Date.now() })); await watchDay(); },
+  async updateEntry(id, e) { const cur = (await IDB.get("entries", id)) || {}; await IDB.put("entries", clean({ ...cur, ...e, id })); await watchDay(); },
+  async deleteEntry(id) { await IDB.del("entries", id); await watchDay(); },
+  async recent() {
+    const list = (await IDB.all("entries")).sort((a, b) => b.createdAt - a.createdAt);
+    const seen = new Set(), out = [];
+    for (const e of list) { const k = norm(e.name); if (seen.has(k) || !e.per100) continue; seen.add(k); out.push(e); if (out.length >= 12) break; }
+    return out;
+  },
+  async exportAll() {
+    return { app: "yummer", version: 1, exportedAt: new Date().toISOString(), goals: await IDB.get("kv", "goals") || null, foods: await IDB.all("foods"), entries: await IDB.all("entries") };
+  },
+  async importAll(d) {
+    if (!d || d.app !== "yummer" || !Array.isArray(d.entries) || !Array.isArray(d.foods)) throw new Error("Это не файл резервной копии Yummer.");
+    for (const f of d.foods) if (f && f.id) await IDB.put("foods", f);
+    for (const e of d.entries) if (e && e.id && e.date) await IDB.put("entries", e);
+    if (d.goals) await this.saveGoals(d.goals);
+    await reloadFoods(); await watchDay();
+    return { foods: d.foods.length, entries: d.entries.length };
+  },
+};
+
+async function init() {
+  try {
+    await IDB.open();
+    try { if (navigator.storage && navigator.storage.persist) S.persisted = await navigator.storage.persist(); } catch {}
+    const g = await IDB.get("kv", "goals"); if (g) { S.goals = { ...DEFAULT_GOALS, ...g }; S.goalsSet = true; }
+    const ai = await IDB.get("kv", "ai");
+    if (ai) { AI.provider = ai.provider || "gemini"; AI.keys = { ...AI.keys, ...(ai.keys || {}) }; AI.geminiModel = ai.geminiModel || AI.geminiModel; }
+    S.mode = "ready";
+    S.foods = await IDB.all("foods");
+    await watchDay();
+  } catch (e) {
+    S.mode = "error"; S.error = "Не удалось открыть хранилище на устройстве: " + (e && e.message || e); render();
+  }
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+/* ---------- Rendering ---------- */
+function totals(list) { return list.reduce((t, e) => ({ kcal: t.kcal + (+e.kcal || 0), protein: t.protein + (+e.protein || 0), fat: t.fat + (+e.fat || 0), carbs: t.carbs + (+e.carbs || 0) }), { kcal: 0, protein: 0, fat: 0, carbs: 0 }); }
+
+function dial(t, g) {
+  const R = 56, C = 2 * Math.PI * R, pct = Math.min(1, g.kcal ? t.kcal / g.kcal : 0), over = t.kcal > g.kcal;
+  const left = Math.round(g.kcal - t.kcal);
+  return `<div class="dial" role="img" aria-label="Съедено ${Math.round(t.kcal)} из ${g.kcal} ккал">
+    <svg viewBox="0 0 132 132"><circle cx="66" cy="66" r="${R}" fill="none" stroke="var(--sunk)" stroke-width="12"/>
+    ${pct > 0 ? `<circle cx="66" cy="66" r="${R}" fill="none" stroke="${over ? "var(--warn)" : "var(--accent)"}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${C * pct} ${C}"/>` : ""}</svg>
+    <div class="center"><div class="big num">${Math.abs(left)}</div><div class="small">${left >= 0 ? "ккал осталось" : "ккал сверх нормы"}</div></div></div>`;
+}
+function macroBar(label, key, t, g, color) {
+  const pct = g[key] ? Math.min(100, t[key] / g[key] * 100) : 0;
+  return `<div class="macro"><div class="row"><b>${label}</b><span class="num">${fm(t[key])} / ${g[key]} г</span></div>
+    <div class="bar"><i style="width:${pct}%;background:var(${color})"></i></div></div>`;
+}
+const dots = e => `<span class="dots num"><i class="p">${fm(e.protein)}</i><i class="f">${fm(e.fat)}</i><i class="c">${fm(e.carbs)}</i></span>`;
+
+function viewDiary() {
+  const t = totals(S.entries), g = S.goals;
+  let h = "";
+  if (S.mode === "error") return `<div class="banner warn">${esc(S.error)}</div>`;
+  if (!S.goalsSet && S.mode !== "loading") h += `<div class="banner">Сейчас стоят примерные цели: ${DEFAULT_GOALS.kcal} ккал. <button class="btn" data-act="tab" data-tab="settings" style="padding:4px 10px;margin-left:4px">Задать свои</button></div>`;
+  h += `<section class="summary">${dial(t, g)}<div class="macros">
+      ${macroBar("Белки", "protein", t, g, "--protein")}${macroBar("Жиры", "fat", t, g, "--fat")}${macroBar("Углеводы", "carbs", t, g, "--carbs")}</div>
+      <div class="kcalline num"><span>Съедено <b>${Math.round(t.kcal)}</b> ккал</span><span>Цель <b>${g.kcal}</b> ккал</span></div></section>`;
+  for (const [key, label] of MEALS) {
+    const items = S.entries.filter(e => e.meal === key).sort((a, b) => a.createdAt - b.createdAt);
+    const mt = totals(items);
+    h += `<section class="meal"><div class="mhead"><h2>${label}</h2><span class="mk num">${items.length ? Math.round(mt.kcal) + " ккал" : ""}</span></div><div class="list">`;
+    for (const e of items) h += `<button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}</div>
+      <div class="sub num">${fm(e.grams)} г · ${dots(e)}</div></div><div class="kc num">${Math.round(e.kcal)}</div></button>`;
+    h += `<button class="addrow" data-act="add" data-meal="${key}">Добавить продукт</button></div></section>`;
+  }
+  return h;
+}
+
+function viewFoods() {
+  const foods = [...S.foods].sort((a, b) => a.name.localeCompare(b.name));
+  let h = `<div class="section-title">Мои продукты</div><p class="muted small">Продукты, которые вы создали или сфотографировали. Значения на 100 г.</p>`;
+  h += `<button class="btn primary block" data-act="newFood" style="margin-bottom:12px">Создать продукт</button>`;
+  if (!foods.length) return h + `<div class="card empty">Сохранённых продуктов пока нет. Создайте продукт или сфотографируйте этикетку, и он появится здесь.</div>`;
+  h += `<div class="list">`;
+  for (const f of foods) h += `<button class="item" data-act="editFood" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</div>
+    <div class="sub num">${f.barcode ? "▮▯▮ " + esc(f.barcode) + " · " : ""}${dots(f)}</div></div><div class="kc num">${Math.round(f.kcal)}<span class="muted small"> ккал</span></div></button>`;
+  return h + `</div>`;
+}
+
+function viewSettings() {
+  const masked = AI.key ? AI.key.slice(0, 10) + "…" + AI.key.slice(-4) : "";
+  return viewGoals() + `
+  <div class="section-title" style="margin-top:22px">ИИ</div>
+  <form class="card stack" id="keyForm">
+    <p class="small muted" style="margin:0">Нужен для «Описать словами», чтения этикеток и перевода поиска. Ключ хранится только на этом телефоне и отправляется только выбранному сервису.</p>
+    <div class="seg" role="group" aria-label="Сервис ИИ">
+      <button type="button" data-act="provider" data-p="gemini" aria-pressed="${AI.provider === "gemini"}">Gemini (бесплатно)</button>
+      <button type="button" data-act="provider" data-p="claude" aria-pressed="${AI.provider === "claude"}">Claude</button>
+    </div>
+    ${AI.provider === "gemini"
+      ? `<p class="small muted" style="margin:0">Бесплатный ключ: aistudio.google.com → Get API key. На бесплатном тарифе есть дневной лимит запросов, и Google может использовать запросы для улучшения своих моделей.</p>`
+      : `<p class="small muted" style="margin:0">Платно, примерно несколько центов в день. Ключ: console.anthropic.com → API Keys.</p>`}
+    ${AI.key ? `<p class="small" style="margin:0">Сейчас: <span class="keybox">${esc(masked)}</span></p>` : ""}
+    <div class="field"><label for="k-key">${AI.key ? "Заменить ключ" : "Ключ " + AI.label()}</label><input id="k-key" type="text" class="keybox" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${AI.provider === "gemini" ? "AIza…" : "sk-ant-…"}"></div>
+    ${AI.provider === "gemini" ? `<div class="field"><label for="k-model">Модель Gemini</label><input id="k-model" type="text" class="keybox" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(AI.geminiModel)}"></div>` : ""}
+    <div class="grid2"><button class="btn primary" type="submit">Сохранить</button>${AI.key ? `<button class="btn" type="button" data-act="testKey">Проверить</button>` : ""}</div>
+    ${AI.key ? `<button class="btn danger" type="button" data-act="${S.confirmKeyDel ? "delKey" : "askDelKey"}">${S.confirmKeyDel ? "Нажмите ещё раз, чтобы удалить ключ" : "Удалить ключ"}</button>` : ""}
+    <div class="status" id="keyStatus"></div>
+  </form>
+  <div class="section-title" style="margin-top:22px">Резервная копия</div>
+  <div class="card stack">
+    <p class="small muted" style="margin:0">Все данные хранятся на этом устройстве. Сохраняйте копию время от времени, например в «Файлы» или iCloud Drive.</p>
+    <div class="grid2"><button class="btn" data-act="export">Сохранить копию</button><button class="btn" data-act="import">Восстановить</button></div>
+    <div class="status" id="bkStatus"></div>
+  </div>
+  <p class="small muted" style="margin-top:18px">Данные о товарах: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>, лицензия ODbL.</p>`;
+}
+function viewGoals() {
+  const g = S.goals, kFromMacros = Math.round(g.protein * 4 + g.fat * 9 + g.carbs * 4);
+  return `<div class="section-title">Цели на день</div>
+  <form class="card stack" id="goalsForm">
+    <div class="field"><label for="g-kcal">Калории (ккал)</label><input id="g-kcal" type="number" inputmode="numeric" min="800" max="6000" value="${g.kcal}"></div>
+    <div class="grid2">
+      <div class="field"><label for="g-protein">Белки (г)</label><input id="g-protein" type="number" inputmode="numeric" min="0" value="${g.protein}"></div>
+      <div class="field"><label for="g-fat">Жиры (г)</label><input id="g-fat" type="number" inputmode="numeric" min="0" value="${g.fat}"></div>
+      <div class="field"><label for="g-carbs">Углеводы (г)</label><input id="g-carbs" type="number" inputmode="numeric" min="0" value="${g.carbs}"></div>
+      <div class="field"><label>По БЖУ</label><div class="num" style="padding:10px 0" id="g-calc">${kFromMacros} ккал</div></div>
+    </div>
+    <p class="small muted">В грамме белков и углеводов 4 ккал, в грамме жиров 9. Сумма по БЖУ должна быть близка к цели по калориям.</p>
+    <button class="btn primary" type="submit">Сохранить цели</button>
+  </form>`;
+}
+
+function render() {
+  const app = $("#app");
+  const head = `<header class="top"><div class="brand">Yummer</div>${S.tab === "diary" ? `<div class="datenav">
+    <button data-act="day" data-d="-1" aria-label="Предыдущий день">‹</button><div class="label">${esc(dateLabel(S.date))}</div>
+    <button data-act="day" data-d="1" aria-label="Следующий день">›</button></div>` : ""}</header>`;
+  const body = S.mode === "loading" ? `<p class="muted">Загружаем дневник…</p>` : S.tab === "diary" ? viewDiary() : S.tab === "foods" ? viewFoods() : viewSettings();
+  const active = document.activeElement?.id;
+  app.innerHTML = head + body + `<div id="toast" class="status" role="status" style="margin-top:12px">${esc(S.toast || "")}</div>`;
+  if (active && S.tab === "settings") { const el = document.getElementById(active); if (el) el.focus(); }
+  renderTabs();
+}
+function renderTabs() {
+  let nav = $("nav.tabs");
+  if (!nav) { nav = document.createElement("nav"); nav.className = "tabs"; nav.setAttribute("aria-label", "Разделы"); document.body.appendChild(nav); }
+  nav.innerHTML = `<div class="in">${[["diary","Дневник"],["foods","Мои продукты"],["settings","Настройки"]].map(([k, l]) =>
+    `<button data-act="tab" data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ""}>${l}</button>`).join("")}</div>`;
+}
+let toastTimer;
+function toast(msg, isErr) { S.toast = msg; const el = $("#toast"); if (el) { el.textContent = msg; el.className = "status" + (isErr ? " err" : ""); } clearTimeout(toastTimer); toastTimer = setTimeout(() => { S.toast = ""; const e2 = $("#toast"); if (e2) e2.textContent = ""; }, 4000); }
+
+/* ---------- Sheet (add / edit flows) ---------- */
+let sheet = null; // { step, meal, ... }
+function openSheet(s) { sheet = s; renderSheet(); }
+function closeSheet() { sheet = null; $("#sheetRoot").innerHTML = ""; }
+const ICON = {
+  scan: `<svg viewBox="0 0 24 24"><path d="M3 7V4h3M21 7V4h-3M3 17v3h3M21 17v3h-3"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>`,
+  label: `<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>`,
+  ai: `<svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></svg>`,
+};
+
+function mealLabel(k) { return (MEALS.find(m => m[0] === k) || [, "Приём пищи"])[1]; }
+
+function renderSheet() {
+  const root = $("#sheetRoot");
+  if (!sheet) { root.innerHTML = ""; return; }
+  let inner = "";
+  const s = sheet;
+  if (s.step === "search") inner = sheetSearch(s);
+  else if (s.step === "amount") inner = sheetAmount(s);
+  else if (s.step === "ai") inner = sheetAI(s);
+  else if (s.step === "food") inner = sheetFood(s);
+  else if (s.step === "editEntry") inner = sheetAmount(s);
+  const keepFocus = document.activeElement && root.contains(document.activeElement) ? document.activeElement.id : null;
+  const selStart = keepFocus ? document.activeElement.selectionStart : null;
+  root.innerHTML = `<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-modal="true"><div class="panel"><div class="grab"></div>${inner}</div></div>`;
+  if (keepFocus) { const el = document.getElementById(keepFocus); if (el) { el.focus(); try { if (selStart != null) el.setSelectionRange(selStart, selStart); } catch {} } }
+  else { const af = root.querySelector("[data-autofocus]"); if (af) af.focus(); }
+}
+
+function sheetSearch(s) {
+  const q = norm(s.q);
+  const mine = S.foods.map(f => ({ ...f, source: "mine" }));
+  let results;
+  if (q) {
+    const words = q.split(/\s+/).filter(Boolean);
+    const hit = f => { const n = norm(f.name + " " + (f.brand || "")); return words.every(w => n.includes(w)); };
+    const code = s.q.trim();
+    results = [...mine.filter(f => hit(f) || (f.barcode && f.barcode === code)), ...GENERIC.filter(hit)].slice(0, 30);
+  } else results = null;
+  const tools = `<div class="tools">
+    <button class="tool" data-act="scan">${ICON.scan}Штрихкод</button>
+    <button class="tool" data-act="labelPhoto">${ICON.label}Фото этикетки</button>
+    <button class="tool" data-act="toAI">${ICON.ai}Описать словами</button></div>`;
+  let list = "";
+  const row = f => `<button class="item" data-act="pick" data-src="${f.source}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.source === "generic" ? '<span class="tag">базовый</span>' : f.source === "recent" ? '<span class="tag">недавнее</span>' : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
+    <div class="sub num">${f.brand ? esc(f.brand) + " · " : ""}${Math.round(f.kcal)} ккал / 100 г · ${dots(f)}</div></div></button>`;
+  if (results) list = results.length ? `<div class="results">${results.map(row).join("")}</div>` :
+    `<div class="empty">По запросу «${esc(s.q)}» ничего не найдено. Попробуйте «Описать словами» или <button class="btn" data-act="newFood" style="padding:4px 10px">создайте продукт</button></div>`;
+  else if (s.recent?.length) list = `<p class="small muted" style="margin:4px 0">Недавно ели</p><div class="results">${s.recent.map(e => row({ id: "r:" + e.name, name: e.name, ...e.per100, source: "recent" })).join("")}</div>`;
+  else list = `<p class="small muted">Ищите среди своих продуктов и ${GENERIC.length} базовых продуктов, ищите товары польских магазинов в Open Food Facts, сканируйте штрихкод или опишите еду своими словами.</p>`;
+  return `<h3>${esc(mealLabel(s.meal))}: добавить<button data-act="close" aria-label="Закрыть">✕</button></h3>
+    <input type="search" id="q" placeholder="Поиск: творог, skyr, Danone…" value="${esc(s.q || "")}" autocomplete="off" data-autofocus>
+    ${tools}<div class="status ${s.err ? "err" : ""}" id="sstatus">${esc(s.status || "")}</div>${list}
+    ${offBlock(s, row)}`;
+}
+
+function sheetAmount(s) {
+  const f = s.food, g = +s.grams || 0, m = scale(f, g);
+  const unit = f.serving ? `<div class="seg" role="group" aria-label="Единицы">
+      <button data-act="unit" data-u="g" aria-pressed="${s.unit !== "srv"}">Граммы</button>
+      <button data-act="unit" data-u="srv" aria-pressed="${s.unit === "srv"}">Порции (${fm(f.serving)} г)</button></div>` : "";
+  const qty = s.unit === "srv" ? r1(g / f.serving) : g;
+  const isEdit = s.step === "editEntry";
+  return `<h3>${esc(f.name)}<button data-act="close" aria-label="Закрыть">✕</button></h3>
+    <div class="stack">
+      ${unit}
+      <div class="grid2">
+        <div class="field"><label for="amt">${s.unit === "srv" ? "Порции" : "Количество (г)"}</label><input id="amt" type="number" inputmode="decimal" min="0" step="any" value="${qty || ""}" data-autofocus></div>
+        <div class="field"><label for="mealSel">Приём пищи</label><select id="mealSel">${MEALS.map(([k, l]) => `<option value="${k}" ${k === s.meal ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+      </div>
+      <div class="preview num" id="pv">${previewHTML(m)}</div>
+      <p class="small muted">На 100 г: ${Math.round(f.kcal)} ккал, белки ${fm(f.protein)} г, жиры ${fm(f.fat)} г, углеводы ${fm(f.carbs)} г.</p>
+      <button class="btn primary block" data-act="${isEdit ? "saveEntry" : "addEntry"}">${isEdit ? "Сохранить" : "Добавить в дневник"}</button>
+      ${isEdit ? `<button class="btn danger block" data-act="${s.confirmDel ? "delEntry" : "askDel"}">${s.confirmDel ? "Нажмите ещё раз, чтобы удалить" : "Удалить из дневника"}</button>` : `<button class="btn block" data-act="back">Назад к поиску</button>`}
+    </div>`;
+}
+const previewHTML = m => `<div><b>${Math.round(m.kcal)}</b><span>ккал</span></div><div><b style="color:var(--protein)">${fm(m.protein)}</b><span>белки</span></div><div><b style="color:var(--fat)">${fm(m.fat)}</b><span>жиры</span></div><div><b style="color:var(--carbs)">${fm(m.carbs)}</b><span>углев.</span></div>`;
+
+function sheetAI(s) {
+  const items = s.items || [];
+  const t = totals(items);
+  return `<h3>Опишите, что вы съели<button data-act="close" aria-label="Закрыть">✕</button></h3>
+    <div class="stack">
+      <div class="field"><label for="aitext">Напишите так, как сказали бы вслух</label>
+        <textarea id="aitext" placeholder="например: омлет из 2 яиц на масле, кусок ржаного хлеба и кофе с молоком" data-autofocus>${esc(s.text || "")}</textarea></div>
+      <button class="btn primary" data-act="runAI" ${s.busy ? "disabled" : ""}>${s.busy ? "Считаем…" : items.length ? "Посчитать заново" : "Посчитать"}</button>
+      <div class="status ${s.err ? "err" : ""}">${esc(s.status || "")}</div>
+      ${items.length ? `<div class="list aiitems">${items.map((e, i) => `<div class="item"><div class="main"><div class="name">${esc(e.name)}</div><div class="sub num">${fm(e.grams)} г · ${dots(e)}</div></div>
+          <div class="kc num">${Math.round(e.kcal)}</div><button class="btn" data-act="aiDrop" data-i="${i}" aria-label="Убрать ${esc(e.name)}" style="padding:4px 10px">✕</button></div>`).join("")}</div>
+        <div class="preview num">${previewHTML(t)}</div>
+        <p class="small muted">Это оценка. Количество можно поправить в дневнике после добавления.</p>
+        <button class="btn primary block" data-act="aiAdd">Добавить в «${esc(mealLabel(s.meal))}»: ${items.length} шт.</button>` : ""}
+      <button class="btn block" data-act="back">Назад к поиску</button>
+    </div>`;
+}
+
+function sheetFood(s) {
+  const f = s.food || {};
+  const v = k => f[k] == null ? "" : f[k];
+  return `<h3>${s.id ? "Изменить продукт" : "Новый продукт"}<button data-act="close" aria-label="Закрыть">✕</button></h3>
+    <form class="stack" id="foodForm">
+      <button type="button" class="btn" data-act="labelIntoForm">${s.busy ? "Читаем этикетку…" : "Заполнить по фото этикетки"}</button>
+      <div class="status ${s.err ? "err" : ""}">${esc(s.status || "")}</div>
+      <div class="field"><label for="f-name">Название</label><input id="f-name" type="text" required value="${esc(v("name"))}" placeholder="например: Skyr pitny waniliowy"></div>
+      <div class="grid2">
+        <div class="field"><label for="f-brand">Бренд (необязательно)</label><input id="f-brand" type="text" value="${esc(v("brand"))}"></div>
+        <div class="field"><label for="f-barcode">Штрихкод (необязательно)</label><input id="f-barcode" type="text" inputmode="numeric" value="${esc(v("barcode"))}"></div>
+      </div>
+      <p class="small muted" style="margin:0">Пищевая ценность на 100 г (или 100 мл)</p>
+      <div class="grid4">
+        <div class="field"><label for="f-kcal">ккал</label><input id="f-kcal" type="number" step="any" min="0" required value="${v("kcal")}"></div>
+        <div class="field"><label for="f-protein">Белки</label><input id="f-protein" type="number" step="any" min="0" required value="${v("protein")}"></div>
+        <div class="field"><label for="f-fat">Жиры</label><input id="f-fat" type="number" step="any" min="0" required value="${v("fat")}"></div>
+        <div class="field"><label for="f-carbs">Углев.</label><input id="f-carbs" type="number" step="any" min="0" required value="${v("carbs")}"></div>
+      </div>
+      <div class="field"><label for="f-serving">Порция в граммах (необязательно)</label><input id="f-serving" type="number" step="any" min="0" value="${v("serving")}" placeholder="например, 150 для одной баночки"></div>
+      <button class="btn primary" type="submit">${s.id ? "Сохранить продукт" : s.meal ? "Сохранить и выбрать количество" : "Сохранить продукт"}</button>
+      ${s.id ? `<button type="button" class="btn danger" data-act="${s.confirmDel ? "delFood" : "askDelFood"}">${s.confirmDel ? "Нажмите ещё раз, чтобы удалить" : "Удалить продукт"}</button>` : ""}
+      ${s.meal ? `<button type="button" class="btn" data-act="back">Назад к поиску</button>` : ""}
+    </form>`;
+}
+
+function readFoodForm() {
+  const g = id => $("#" + id)?.value.trim();
+  const n = id => { const x = parseFloat(String(g(id) || "").replace(",", ".")); return isFinite(x) ? x : null; };
+  return { name: g("f-name"), brand: g("f-brand") || null, barcode: (g("f-barcode") || "").replace(/\D/g, "") || null,
+    kcal: n("f-kcal"), protein: n("f-protein"), fat: n("f-fat"), carbs: n("f-carbs"), serving: n("f-serving") };
+}
+
+/* ---------- Images: barcode decode + label reading ---------- */
+let camPurpose = null;
+function pickPhoto(purpose) { camPurpose = purpose; const inp = $("#camInput"); inp.value = ""; inp.click(); }
+
+async function decodeBarcode(file) {
+  if ("BarcodeDetector" in window) {
+    try {
+      const det = new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "qr_code"] });
+      const bmp = await createImageBitmap(file);
+      const codes = await det.detect(bmp);
+      if (codes.length) return codes[0].rawValue;
+    } catch {}
+  }
+  if (window.ZXing) {
+    const url = URL.createObjectURL(file);
+    try {
+      const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+      const reader = new ZXing.BrowserMultiFormatReader(hints);
+      const res = await reader.decodeFromImageUrl(url);
+      return res.getText();
+    } catch {} finally { URL.revokeObjectURL(url); }
+  }
+  return null;
+}
+
+async function shrink(file, max = 1600) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise(res => c.toBlob(b => res(b || file), "image/jpeg", 0.85));
+  } catch { return file; }
+}
+
+const LABEL_PROMPT = `Read this photo of a food product (nutrition table and/or front of the pack, possibly in Polish).
+Return JSON only, no prose, in exactly this shape:
+{"name": string|null, "brand": string|null, "barcode": string|null, "kcal": number|null, "protein": number|null, "fat": number|null, "carbs": number|null, "serving": number|null}
+Rules: nutrition values are per 100 g or 100 ml (in Polish "w 100 g"). If only kJ is shown, divide by 4.184. "carbs" is total carbohydrates (węglowodany), not sugars.
+"serving" is the portion or pack size in grams if printed, else null. "barcode" is the digits under a barcode if visible, else null. Give the product name in its original language as printed on the pack. Use null for anything unreadable.`;
+
+const NUM = { type: ["number", "null"] }, STR = { type: ["string", "null"] };
+const LABEL_SCHEMA = { type: "object", additionalProperties: false, required: ["name", "brand", "barcode", "kcal", "protein", "fat", "carbs", "serving"],
+  properties: { name: STR, brand: STR, barcode: STR, kcal: NUM, protein: NUM, fat: NUM, carbs: NUM, serving: NUM } };
+const ITEMS_SCHEMA = { type: "object", additionalProperties: false, required: ["items"], properties: { items: { type: "array", items: { type: "object", additionalProperties: false,
+  required: ["name", "grams", "kcal", "protein", "fat", "carbs"], properties: { name: { type: "string" }, grams: { type: "number" }, kcal: { type: "number" }, protein: { type: "number" }, fat: { type: "number" }, carbs: { type: "number" } } } } } };
+async function readLabel(file) {
+  const img = await shrink(file);
+  const out = await AI.json(LABEL_PROMPT, LABEL_SCHEMA, [img]);
+  if (!out || typeof out !== "object") throw new Error("Не удалось прочитать этикетку. Сделайте более чёткое фото поближе.");
+  return out;
+}
+
+$("#camInput").addEventListener("change", async ev => {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file || !sheet) return;
+  const purpose = camPurpose;
+  if (purpose === "scan") {
+    setStatus("Распознаём штрихкод…");
+    let code = await decodeBarcode(file);
+    if (!code && AI.ready()) {
+      setStatus("Полоски не распознались, просим Claude прочитать цифры…");
+      try { const r = await readLabel(file); code = r.barcode ? String(r.barcode).replace(/\D/g, "") : null; } catch {}
+    }
+    if (!code) return setStatus("Штрихкод не найден. Снимите ближе, чтобы штрихкод занимал большую часть фото, или введите цифры в поиск.", true);
+    handleCode(code.trim());
+  } else if (purpose === "label" || purpose === "labelForm") {
+    if (sheet.step !== "food") openSheet({ step: "food", meal: sheet.meal, food: { barcode: sheet.pendingCode || null }, busy: true, status: "Читаем этикетку…" });
+    else { sheet.busy = true; sheet.status = "Читаем этикетку…"; sheet.err = false; renderSheet(); }
+    try {
+      const cur = readFoodForm();
+      const r = await readLabel(file);
+      const merged = { ...cur };
+      for (const k of ["name", "brand", "kcal", "protein", "fat", "carbs", "serving"]) if (r[k] != null && r[k] !== "") merged[k] = r[k];
+      if (!merged.barcode && r.barcode) merged.barcode = String(r.barcode).replace(/\D/g, "");
+      sheet.food = merged; sheet.busy = false;
+      const missing = ["kcal", "protein", "fat", "carbs"].filter(k => merged[k] == null);
+      sheet.status = missing.length ? "Заполнено то, что удалось прочитать. Добавьте: " + missing.map(k => ({kcal:"ккал",protein:"белки",fat:"жиры",carbs:"углеводы"})[k]).join(", ") + "." : "Заполнено по этикетке. Проверьте цифры и сохраните.";
+      sheet.err = !!missing.length; renderSheet();
+    } catch (e) { sheet.busy = false; sheet.status = (e?.message || "Не удалось прочитать этикетку."); sheet.err = true; renderSheet(); }
+  }
+});
+
+function setStatus(msg, err) { if (!sheet) return; sheet.status = msg; sheet.err = !!err; renderSheet(); }
+
+function handleCode(code) {
+  const digits = code.replace(/\s/g, "");
+  const found = S.foods.find(f => f.barcode && f.barcode === digits);
+  if (found) { openSheet({ step: "amount", meal: sheet.meal, food: { ...found, source: "mine" }, grams: found.serving || 100, unit: found.serving ? "srv" : "g" }); return; }
+  if (/^https?:\/\//i.test(digits)) { setStatus("В этом QR-коде ссылка (" + digits.slice(0, 60) + "), а не данные о продукте. Сканируйте штрихкод.", true); return; }
+  if (navigator.onLine) { lookupBarcode(digits); return; }
+  newProductForm(digits, "Товара " + digits + " нет среди ваших продуктов.");
+}
+async function lookupBarcode(digits) {
+  setStatus("Ищем " + digits + " в Open Food Facts…");
+  try {
+    const f = await offByBarcode(digits);
+    if (!sheet) return;
+    if (offComplete(f)) { openSheet({ step: "amount", meal: sheet.meal, food: f, grams: f.serving || 100, unit: f.serving ? "srv" : "g" }); return; }
+    newProductForm(digits, f ? "Товар найден в Open Food Facts, но без полной пищевой ценности." : "Товара " + digits + " нет в Open Food Facts.", f);
+  } catch (e) { if (sheet) newProductForm(digits, offErrorText(e)); }
+}
+function newProductForm(digits, why, partial) {
+  openSheet({ step: "food", meal: sheet.meal, food: { ...(partial || {}), barcode: digits, source: undefined }, pendingCode: digits,
+    status: why + " Сфотографируйте таблицу пищевой ценности, и поля заполнятся сами, или введите значения вручную. Продукт сохранится, и в следующий раз штрихкод найдётся сразу." });
+}
+
+/* ---------- Live search UI ---------- */
+function offBlock(s, row) {
+  if (!navigator.onLine) return `<p class="small muted" style="margin-top:14px">Нет интернета: поиск в Open Food Facts недоступен.</p>`;
+  const q = (s.q || "").trim();
+  let h = `<div style="margin-top:14px" class="stack">`;
+  if (q && !/^\d{8,14}$/.test(q)) h += `<button class="btn block" data-act="offSearch" ${s.offBusy ? "disabled" : ""}>${s.offBusy ? "Ищем в Open Food Facts…" : "Искать «" + esc(q) + "» в Open Food Facts" + (/[а-яё]/i.test(q) && AI.ready() ? " (по-польски)" : "")}</button>`;
+  if (s.offErr) h += `<div class="status err">${esc(s.offErr)}</div>`;
+  if (s.offResults && s.offFor === q) h += s.offResults.length ? `<p class="small muted" style="margin:0">Open Food Facts${s.offQuery && s.offQuery !== q ? " (по-польски: «" + esc(s.offQuery) + "»)" : ""}</p><div class="results">${s.offResults.map(row).join("")}</div>` : `<p class="small muted" style="margin:0">В Open Food Facts ничего не нашлось.</p>`;
+  h += `<p class="small muted" style="margin:0">Данные о товарах: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>, лицензия ODbL.</p></div>`;
+  return h;
+}
+async function runOffSearch() {
+  if (!sheet || sheet.step !== "search") return;
+  const q = (sheet.q || "").trim(); if (!q) return;
+  sheet.offBusy = true; sheet.offErr = ""; renderSheet();
+  try { const r = await offSearchLive(q); if (!sheet || sheet.step !== "search") return; sheet.offResults = r.items; sheet.offQuery = r.query; sheet.offFor = q; }
+  catch (e) { if (!sheet) return; sheet.offErr = offErrorText(e); }
+  sheet.offBusy = false; renderSheet();
+}
+
+/* ---------- AI describe ---------- */
+async function runAI() {
+  const text = ($("#aitext")?.value || "").trim();
+  sheet.text = text;
+  if (!text) { sheet.status = "Сначала напишите, что вы съели."; sheet.err = true; return renderSheet(); }
+  sheet.busy = true; sheet.status = "Спрашиваем Claude…"; sheet.err = false; renderSheet();
+  const prompt = `You estimate nutrition for a food diary. The person wrote what they ate:
+"""${text}"""
+Split it into separate foods. For each, estimate the eaten amount in grams (use typical Polish/European portions and products when not specified) and the TOTAL kcal, protein, fat and carbs for that amount.
+Return JSON only, no prose, exactly: {"items":[{"name":string,"grams":number,"kcal":number,"protein":number,"fat":number,"carbs":number}]}
+Write food names in Russian.`;
+  try {
+    const out = await AI.json(prompt, ITEMS_SCHEMA);
+    const items = (out?.items || []).filter(i => i && i.name && +i.grams > 0).map(i => ({ name: String(i.name), grams: +i.grams, kcal: +i.kcal || 0, protein: +i.protein || 0, fat: +i.fat || 0, carbs: +i.carbs || 0 }));
+    sheet.items = items; sheet.busy = false;
+    sheet.status = items.length ? "" : "Не получилось разобрать продукты. Назовите каждый продукт и примерное количество."; sheet.err = !items.length;
+  } catch (e) {
+    sheet.busy = false; sheet.err = true;
+    sheet.status = e?.message || "Не удалось получить оценку. Попробуйте ещё раз.";
+  }
+  renderSheet();
+}
+
+/* ---------- Events ---------- */
+function entryFromFood(f, grams, meal) {
+  const m = scale(f, grams);
+  return { date: S.date, meal, name: f.name + (f.brand ? " (" + f.brand + ")" : ""), grams: r1(grams),
+    kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs),
+    per100: { kcal: +f.kcal, protein: +f.protein, fat: +f.fat, carbs: +f.carbs, serving: f.serving || null },
+    foodId: f.source === "mine" ? f.id : null };
+}
+async function safe(p, ok) { try { await p; if (ok) toast(ok); } catch (e) { toast("Не удалось сохранить: " + (e?.message || "попробуйте ещё раз"), true); } }
+
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-act]");
+  if (!b) return;
+  const act = b.dataset.act;
+  switch (act) {
+    case "tab": S.tab = b.dataset.tab; render(); window.scrollTo(0, 0); break;
+    case "day": S.date = shift(S.date, +b.dataset.d); render(); watchDay(); break;
+    case "close": closeSheet(); break;
+    case "add": openSheet({ step: "search", meal: b.dataset.meal, q: "", recent: [] }); Data.recent().then(r => { if (sheet && sheet.step === "search") { sheet.recent = r; renderSheet(); } }); break;
+    case "back": openSheet({ step: "search", meal: ($("#mealSel")?.value) || sheet.meal, q: sheet.q0 || "", recent: sheet.recent0 || [] }); Data.recent().then(r => { if (sheet && sheet.step === "search") { sheet.recent = r; renderSheet(); } }); break;
+    case "pick": {
+      const src = b.dataset.src, id = b.dataset.id;
+      let f = src === "mine" ? S.foods.find(x => x.id === id) : src === "generic" ? GENERIC.find(x => x.id === id) : src === "off" ? (sheet.offResults || []).find(x => x.id === id) : null;
+      if (src === "recent") { const e = sheet.recent.find(x => "r:" + x.name === id); if (e) f = { name: e.name, ...e.per100, source: "recent", lastGrams: e.grams }; }
+      if (!f) return;
+      f = { ...f, source: src };
+      const grams = f.lastGrams || f.serving || 100;
+      openSheet({ step: "amount", meal: sheet.meal, food: f, grams, unit: f.serving && !f.lastGrams ? "srv" : "g", q0: sheet.q, recent0: sheet.recent });
+      break;
+    }
+    case "unit": sheet.unit = b.dataset.u; renderSheet(); break;
+    case "addEntry": {
+      const grams = +sheet.grams; if (!(grams > 0)) return setStatus("Укажите количество.", true);
+      const meal = $("#mealSel").value; const e = entryFromFood(sheet.food, grams, meal);
+      const fd = sheet.food; closeSheet();
+      if (fd.source === "off" && !S.foods.some(x => x.barcode === fd.barcode)) { const { id, source, ...keep } = fd; try { const nid = await Data.addFood({ ...keep, source: "off" }); e.foodId = nid; } catch {} }
+      await safe(Data.addEntry(e), `«${e.name}» добавлено: ${mealLabel(meal)}.`); break;
+    }
+    case "editEntry": {
+      const e = S.entries.find(x => x.id === b.dataset.id); if (!e) return;
+      const per = e.per100 || { kcal: e.kcal / e.grams * 100, protein: e.protein / e.grams * 100, fat: e.fat / e.grams * 100, carbs: e.carbs / e.grams * 100 };
+      openSheet({ step: "editEntry", id: e.id, meal: e.meal, food: { name: e.name, ...per }, grams: e.grams, unit: "g" }); break;
+    }
+    case "saveEntry": {
+      const grams = +sheet.grams; if (!(grams > 0)) return;
+      const m = scale(sheet.food, grams), meal = $("#mealSel").value, id = sheet.id;
+      closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), "Сохранено."); break;
+    }
+    case "askDel": sheet.confirmDel = true; renderSheet(); break;
+    case "delEntry": { const id = sheet.id; closeSheet(); await safe(Data.deleteEntry(id), "Удалено."); break; }
+    case "toAI": if (!AI.ready()) return setStatus("Чтобы описывать еду словами, добавьте ключ ИИ в «Настройках».", true); openSheet({ step: "ai", meal: sheet.meal, text: sheet.q || "", q0: sheet.q, recent0: sheet.recent }); break;
+    case "runAI": runAI(); break;
+    case "aiDrop": sheet.text = $("#aitext").value; sheet.items.splice(+b.dataset.i, 1); renderSheet(); break;
+    case "aiAdd": {
+      const meal = sheet.meal, items = sheet.items; closeSheet();
+      for (const i of items) {
+        const per100 = { kcal: r1(i.kcal / i.grams * 100), protein: r1(i.protein / i.grams * 100), fat: r1(i.fat / i.grams * 100), carbs: r1(i.carbs / i.grams * 100), serving: null };
+        await safe(Data.addEntry({ date: S.date, meal, name: i.name, grams: r1(i.grams), kcal: r1(i.kcal), protein: r1(i.protein), fat: r1(i.fat), carbs: r1(i.carbs), per100, foodId: null, estimated: true }));
+      }
+      toast(`Добавлено в «${mealLabel(meal)}»: ${items.length} шт.`); break;
+    }
+    case "scan": sheet.status = ""; startScanner(); break;
+    case "scanClose": stopScanner(); break;
+    case "scanPhoto": stopScanner(); pickPhoto("scan"); break;
+    case "export": doExport(); break;
+    case "import": $("#importInput").value = ""; $("#importInput").click(); break;
+    case "testKey": testKey(); break;
+    case "askDelKey": S.confirmKeyDel = true; render(); break;
+    case "delKey": AI.keys[AI.provider] = null; S.confirmKeyDel = false; await saveAISettings(); render(); toast("Ключ удалён."); break;
+    case "provider": AI.provider = b.dataset.p; S.confirmKeyDel = false; await saveAISettings(); render(); break;
+    case "offSearch": runOffSearch(); break;
+    case "labelPhoto": if (!AI.ready()) return setStatus("Чтобы читать этикетки, добавьте ключ ИИ в «Настройках».", true); pickPhoto("label"); break;
+    case "labelIntoForm": sheet.food = readFoodForm(); if (!AI.ready()) return setStatus("Чтобы читать этикетки, добавьте ключ ИИ в «Настройках».", true); pickPhoto("labelForm"); break;
+    case "newFood": openSheet({ step: "food", meal: sheet?.meal || null, food: { name: sheet?.q || "" }, q0: sheet?.q, recent0: sheet?.recent }); break;
+    case "editFood": { const f = S.foods.find(x => x.id === b.dataset.id); if (f) openSheet({ step: "food", id: f.id, food: { ...f } }); break; }
+    case "askDelFood": sheet.food = readFoodForm(); sheet.confirmDel = true; renderSheet(); break;
+    case "delFood": { const id = sheet.id; closeSheet(); await safe(Data.deleteFood(id), "Продукт удалён."); break; }
+  }
+});
+
+document.addEventListener("input", ev => {
+  const t = ev.target;
+  if (!sheet) {
+    if (t.id && t.id.startsWith("g-")) {
+      const n = id => +($("#" + id)?.value || 0);
+      const el = $("#g-calc"); if (el) el.textContent = Math.round(n("g-protein") * 4 + n("g-fat") * 9 + n("g-carbs") * 4) + " kcal";
+    }
+    return;
+  }
+  if (t.id === "q") { sheet.q = t.value; sheet.status = ""; renderSheet(); }
+  else if (t.id === "amt") {
+    const v = parseFloat(String(t.value).replace(",", ".")) || 0;
+    sheet.grams = sheet.unit === "srv" ? v * sheet.food.serving : v;
+    const pv = $("#pv"); if (pv) pv.innerHTML = previewHTML(scale(sheet.food, sheet.grams));
+  }
+  else if (t.id === "aitext") sheet.text = t.value;
+});
+document.addEventListener("change", ev => { if (sheet && ev.target.id === "mealSel") sheet.meal = ev.target.value; });
+document.addEventListener("keydown", ev => {
+  if (ev.key === "Escape" && sheet) closeSheet();
+  if (ev.key === "Enter" && sheet?.step === "search" && ev.target.id === "q") {
+    const v = ev.target.value.trim(); ev.preventDefault(); ev.target.blur(); if (/^\d{8,14}$/.test(v)) handleCode(v); else if (v && navigator.onLine) runOffSearch();
+  }
+});
+
+document.addEventListener("submit", async ev => {
+  ev.preventDefault();
+  if (ev.target.id === "goalsForm") {
+    const n = id => Math.max(0, Math.round(+$("#" + id).value || 0));
+    await safe(Data.saveGoals({ kcal: n("g-kcal") || DEFAULT_GOALS.kcal, protein: n("g-protein"), fat: n("g-fat"), carbs: n("g-carbs") }), "Цели сохранены.");
+    S.goalsSet = true; render();
+  }
+  if (ev.target.id === "keyForm") {
+    const k = ($("#k-key").value || "").trim(), m = ($("#k-model")?.value || "").trim();
+    if (m) AI.geminiModel = m;
+    if (k) {
+      const bad = AI.provider === "claude" ? !/^sk-ant-/.test(k) : k.length < 20;
+      if (bad) { const st = $("#keyStatus"); st.textContent = AI.provider === "claude" ? "Ключ Claude начинается с «sk-ant-»." : "Это не похоже на ключ Gemini."; st.className = "status err"; return; }
+      AI.keys[AI.provider] = k;
+    }
+    await saveAISettings(); S.confirmKeyDel = false; render(); if (AI.key) testKey();
+    return;
+  }
+  if (ev.target.id === "foodForm") {
+    const f = readFoodForm();
+    if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { sheet.food = f; return setStatus("Заполните название и все четыре значения пищевой ценности.", true); }
+    if (f.barcode && !sheet.id && S.foods.some(x => x.barcode === f.barcode)) { sheet.food = f; return setStatus("Продукт с таким штрихкодом уже есть в «Моих продуктах».", true); }
+    const meal = sheet.meal, id = sheet.id;
+    try {
+      if (id) { await Data.updateFood(id, f); closeSheet(); toast("Продукт сохранён."); return; }
+      const newId = await Data.addFood({ ...f, source: "custom" });
+      if (meal) openSheet({ step: "amount", meal, food: { ...f, id: newId, source: "mine" }, grams: f.serving || 100, unit: f.serving ? "srv" : "g" });
+      else { closeSheet(); toast("Продукт сохранён."); }
+    } catch (e) { setStatus("Не удалось сохранить: " + (e?.message || "попробуйте ещё раз"), true); }
+  }
+});
+
+/* ---------- Live camera scanner ---------- */
+let scanReader = null;
+async function startScanner() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.ZXing) { pickPhoto("scan"); return; }
+  const box = $("#scanner"), video = $("#scanVideo"); box.hidden = false; $("#scanHint").textContent = "Наведите камеру на штрихкод";
+  try {
+    const hints = new Map();
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.QR_CODE]);
+    scanReader = new ZXing.BrowserMultiFormatReader(hints, 250);
+    let done = false;
+    await scanReader.decodeFromConstraints({ audio: false, video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } }, video, (result) => {
+      if (!result || done) return; done = true;
+      try { navigator.vibrate && navigator.vibrate(60); } catch {}
+      stopScanner(); if (sheet) handleCode(result.getText().trim());
+    });
+  } catch (e) {
+    stopScanner();
+    setStatus(e && e.name === "NotAllowedError" ? "Нет доступа к камере. Разрешите камеру для Yummer в настройках Safari, или сделайте фото штрихкода." : "Камера недоступна, откроем фото.", true);
+    if (!(e && e.name === "NotAllowedError")) pickPhoto("scan");
+  }
+}
+function stopScanner() { try { scanReader && scanReader.reset(); } catch {} scanReader = null; $("#scanner").hidden = true; }
+
+/* ---------- Settings actions ---------- */
+async function testKey() {
+  const st = $("#keyStatus"); if (!st) return; st.className = "status"; st.textContent = "Проверяем ключ…";
+  try { await AI.text("Reply with the single word: ok"); const s2 = $("#keyStatus"); if (s2) { s2.textContent = "Ключ работает."; } }
+  catch (e) { const s2 = $("#keyStatus"); if (s2) { s2.textContent = e.message; s2.className = "status err"; } }
+}
+async function doExport() {
+  const st = $("#bkStatus");
+  try {
+    const data = await Data.exportAll();
+    const name = "yummer-" + today() + ".json";
+    const file = new File([JSON.stringify(data)], name, { type: "application/json" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); }
+    else { const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+    if (st) { st.className = "status"; st.textContent = "Копия готова: " + data.entries.length + " записей, " + data.foods.length + " продуктов."; }
+  } catch (e) { if (st && e.name !== "AbortError") { st.className = "status err"; st.textContent = "Не удалось сохранить копию: " + e.message; } }
+}
+$("#importInput").addEventListener("change", async ev => {
+  const f = ev.target.files && ev.target.files[0]; if (!f) return;
+  const st = $("#bkStatus");
+  try { const r = await Data.importAll(JSON.parse(await f.text())); if (st) { st.className = "status"; st.textContent = "Восстановлено: " + r.entries + " записей, " + r.foods + " продуктов."; } }
+  catch (e) { if (st) { st.className = "status err"; st.textContent = e.message || "Не удалось прочитать файл."; } }
+});
+window.addEventListener("online", () => { if (sheet && sheet.step === "search") renderSheet(); });
+window.addEventListener("offline", () => { if (sheet && sheet.step === "search") renderSheet(); });
+
+render();
+init();
+})();
+</script>
+</body>
+</html>
