@@ -13,3 +13,4 @@
 - Escape every outside value (Open Food Facts, AI replies, backup files, user input) with `esc()` before it goes into HTML. Validate imported data with the `sanitize*` functions.
 - New network hosts must be added to the Content-Security-Policy in `index.html`. Keep the page free of inline scripts.
 - Vendored libraries are pinned; update `vendor/SHA256SUMS` when replacing one.
+- Pin third-party GitHub Actions to a full commit SHA (with the version in a comment).
