@@ -1,4 +1,5 @@
 import { changed, S } from "../state.js";
+import { t } from "../i18n.js";
 import { clean, norm, uid2 } from "../util.js";
 
 /* ---------- Data layer: IndexedDB on this device ---------- */
@@ -19,9 +20,9 @@ export const IDB = {
   },
   tx(store, mode, fn) {
     return new Promise((res, rej) => {
-      const t = this.db.transaction(store, mode); const st = t.objectStore(store); let out;
+      const txn = this.db.transaction(store, mode); const st = txn.objectStore(store); let out;
       const r = fn(st); if (r) r.onsuccess = () => { out = r.result; };
-      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+      txn.oncomplete = () => res(out); txn.onerror = () => rej(txn.error); txn.onabort = () => rej(txn.error);
     });
   },
   all(store) { return this.tx(store, "readonly", st => st.getAll()); },
@@ -34,18 +35,18 @@ export const IDB = {
   putMany(byStore) {
     const names = Object.keys(byStore);
     return new Promise((res, rej) => {
-      const t = this.db.transaction(names, "readwrite");
-      for (const n of names) { const st = t.objectStore(n); for (const v of byStore[n]) st.put(v); }
-      t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+      const txn = this.db.transaction(names, "readwrite");
+      for (const n of names) { const st = txn.objectStore(n); for (const v of byStore[n]) st.put(v); }
+      txn.oncomplete = () => res(); txn.onerror = () => rej(txn.error); txn.onabort = () => rej(txn.error);
     });
   },
   /** Walks an index newest-first and stops as soon as visit() returns false. */
   scanDesc(store, index, visit) {
     return new Promise((res, rej) => {
-      const t = this.db.transaction(store, "readonly");
-      const rq = t.objectStore(store).index(index).openCursor(null, "prev");
+      const txn = this.db.transaction(store, "readonly");
+      const rq = txn.objectStore(store).index(index).openCursor(null, "prev");
       rq.onsuccess = () => { const c = rq.result; if (c && visit(c.value) !== false) c.continue(); };
-      t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+      txn.oncomplete = () => res(); txn.onerror = () => rej(txn.error); txn.onabort = () => rej(txn.error);
     });
   },
 };
@@ -80,7 +81,7 @@ export const Data = {
     return { app: "yummer", version: 1, exportedAt: new Date().toISOString(), goals: await IDB.get("kv", "goals") || null, foods: await IDB.all("foods"), entries: await IDB.all("entries") };
   },
   async importAll(d) {
-    if (!d || d.app !== "yummer" || !Array.isArray(d.entries) || !Array.isArray(d.foods)) throw new Error("Это не файл резервной копии Yummer.");
+    if (!d || d.app !== "yummer" || !Array.isArray(d.entries) || !Array.isArray(d.foods)) throw new Error(t("backup.notYummer"));
     const foods = d.foods.map(sanitizeFood).filter(Boolean), entries = d.entries.map(sanitizeEntry).filter(Boolean);
     const goals = sanitizeGoals(d.goals);
     await IDB.putMany({ foods, entries });   // one transaction: all records land, or none do

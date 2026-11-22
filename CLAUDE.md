@@ -2,7 +2,7 @@
 
 - The owner reviews every change: work on a branch and open a pull request into `main`; never push to `main` directly.
 - No build step and no runtime dependencies beyond `vendor/`. Keep modules as plain ES modules that load in Safari on iOS.
-- UI text is in Russian. Keep new strings in Russian and write them plainly.
+- The UI supports Russian, English, Polish and German. Never hard-code UI text: add a key to every file in `js/i18n/` and use `t("key")`. The default language follows the device; Settings can override it. Write strings plainly.
 - Before opening a PR run `npm run check` and `npm test`. Add a test in `tests/` for new pure logic.
 - New files under `js/`, `css/`, `fonts/` and `vendor/` must be listed in `SHELL` in `sw.js` (`npm run check` fails otherwise), and `VERSION` there bumped when shipped files change.
 - Keep imports one-way: `ui/` and `actions.js` may import `data/` and `services/`, never the reverse. `data/` signals changes with `changed()` from `state.js`. `npm run check` fails on import cycles.
@@ -17,7 +17,7 @@
 - Pin third-party GitHub Actions to a full commit SHA (with the version in a comment).
 
 ## Review flow
-1. The developer (Claude) builds the change on a branch, runs the checks and a self-review, and opens a PR.
-2. A separate reviewer then reviews the PR against the OWASP Top 10 and for code quality and efficiency, and posts its findings as review comments on the PR.
-3. The developer fixes each finding, or replies explaining why it is not a problem, pushes, and resolves the thread. Security findings stay open until the owner decides.
-4. The owner approves and merges. Nobody else merges.
+1. The developer (Claude) builds the change on a branch, runs the checks and a self-review, opens a PR, and tells the reviewer.
+2. A separate reviewer reviews the PR against the OWASP Top 10 and for code quality and efficiency, and posts its findings as review comments on the PR.
+3. The developer fixes each finding, or replies explaining why it is not a problem, pushes, and resolves the quality threads. Security threads are left for the reviewer.
+4. The reviewer re-reviews the new commits. When the re-review is clean and every CI check is green, the reviewer resolves the remaining threads and merges the PR (the owner's standing rule). The developer never merges.

@@ -1,5 +1,6 @@
-import { DEFAULT_GOALS, GENERIC, mealLabel } from "./data/foods.js";
-import { Data, sanitizeAIItem, watchDay } from "./data/store.js";
+import { DEFAULT_GOALS, genericFoods, mealLabel } from "./data/foods.js";
+import { I18N, setLang, t } from "./i18n.js";
+import { Data, IDB, sanitizeAIItem, watchDay } from "./data/store.js";
 import { AI, ITEMS_SCHEMA, readLabel, saveAISettings } from "./services/ai.js";
 import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
 import { offByBarcode, offComplete, offErrorText, offSearchLive } from "./services/off.js";
@@ -16,22 +17,22 @@ export function handleCode(code) {
   const digits = code.replace(/\s/g, "");
   const found = S.foods.find(f => f.barcode && f.barcode === digits);
   if (found) { openSheet({ step: "amount", meal: ui.sheet.meal, food: { ...found, source: "mine" }, grams: found.serving || 100, unit: found.serving ? "srv" : "g" }); return; }
-  if (/^https?:\/\//i.test(digits)) { setStatus("В этом QR-коде ссылка (" + digits.slice(0, 60) + "), а не данные о продукте. Сканируйте штрихкод.", true); return; }
+  if (/^https?:\/\//i.test(digits)) { setStatus(t("scan.qrLink", { url: digits.slice(0, 60) }), true); return; }
   if (navigator.onLine) { lookupBarcode(digits); return; }
-  newProductForm(digits, "Товара " + digits + " нет среди ваших продуктов.");
+  newProductForm(digits, t("scan.notMine", { code: digits }));
 }
 export async function lookupBarcode(digits) {
-  setStatus("Ищем " + digits + " в Open Food Facts…");
+  setStatus(t("scan.looking", { code: digits }));
   try {
     const f = await offByBarcode(digits);
     if (!ui.sheet) return;
     if (offComplete(f)) { openSheet({ step: "amount", meal: ui.sheet.meal, food: f, grams: f.serving || 100, unit: f.serving ? "srv" : "g" }); return; }
-    newProductForm(digits, f ? "Товар найден в Open Food Facts, но без полной пищевой ценности." : "Товара " + digits + " нет в Open Food Facts.", f);
+    newProductForm(digits, f ? t("scan.partial") : t("scan.notInOff", { code: digits }), f);
   } catch (e) { if (ui.sheet) newProductForm(digits, offErrorText(e)); }
 }
 export function newProductForm(digits, why, partial) {
   openSheet({ step: "food", meal: ui.sheet.meal, food: { ...(partial || {}), barcode: digits, source: undefined }, pendingCode: digits,
-    status: why + " Сфотографируйте таблицу пищевой ценности, и поля заполнятся сами, или введите значения вручную. Продукт сохранится, и в следующий раз штрихкод найдётся сразу." });
+    status: why + " " + t("scan.newProduct") });
 }
 
 
@@ -50,21 +51,21 @@ export async function runOffSearch() {
 export async function runAI() {
   const text = ($("#aitext")?.value || "").trim();
   ui.sheet.text = text;
-  if (!text) { ui.sheet.status = "Сначала напишите, что вы съели."; ui.sheet.err = true; return renderSheet(); }
-  ui.sheet.busy = true; ui.sheet.status = "Спрашиваем Claude…"; ui.sheet.err = false; renderSheet();
+  if (!text) { ui.sheet.status = t("describe.empty"); ui.sheet.err = true; return renderSheet(); }
+  ui.sheet.busy = true; ui.sheet.status = t("describe.asking", { provider: AI.label() }); ui.sheet.err = false; renderSheet();
   const prompt = `You estimate nutrition for a food diary. The person wrote what they ate:
 """${text}"""
 Split it into separate foods. For each, estimate the eaten amount in grams (use typical Polish/European portions and products when not specified) and the TOTAL kcal, protein, fat and carbs for that amount.
 Return JSON only, no prose, exactly: {"items":[{"name":string,"grams":number,"kcal":number,"protein":number,"fat":number,"carbs":number}]}
-Write food names in Russian.`;
+Write food names in ${t("lang.prompt")}.`;
   try {
     const out = await AI.json(prompt, ITEMS_SCHEMA);
     const items = (Array.isArray(out?.items) ? out.items : []).slice(0, 30).map(sanitizeAIItem).filter(Boolean);
     ui.sheet.items = items; ui.sheet.busy = false;
-    ui.sheet.status = items.length ? "" : "Не получилось разобрать продукты. Назовите каждый продукт и примерное количество."; ui.sheet.err = !items.length;
+    ui.sheet.status = items.length ? "" : t("describe.unclear"); ui.sheet.err = !items.length;
   } catch (e) {
     ui.sheet.busy = false; ui.sheet.err = true;
-    ui.sheet.status = e?.message || "Не удалось получить оценку. Попробуйте ещё раз.";
+    ui.sheet.status = e?.message || t("describe.failed");
   }
   renderSheet();
 }
@@ -77,13 +78,13 @@ export function entryFromFood(f, grams, meal) {
     per100: { kcal: +f.kcal, protein: +f.protein, fat: +f.fat, carbs: +f.carbs, serving: f.serving || null },
     foodId: f.source === "mine" ? f.id : null };
 }
-export async function safe(p, ok) { try { await p; if (ok) toast(ok); } catch (e) { toast("Не удалось сохранить: " + (e?.message || "попробуйте ещё раз"), true); } }
+export async function safe(p, ok) { try { await p; if (ok) toast(ok); } catch (e) { toast(t("common.saveFailed", { msg: e?.message || t("common.tryAgain") }), true); } }
 
 
 /* ---------- Settings actions ---------- */
 export async function testKey() {
-  const st = $("#keyStatus"); if (!st) return; st.className = "status"; st.textContent = "Проверяем ключ…";
-  try { await AI.text("Reply with the single word: ok"); const s2 = $("#keyStatus"); if (s2) { s2.textContent = "Ключ работает."; } }
+  const st = $("#keyStatus"); if (!st) return; st.className = "status"; st.textContent = t("ai.testing");
+  try { await AI.text("Reply with the single word: ok"); const s2 = $("#keyStatus"); if (s2) { s2.textContent = t("ai.works"); } }
   catch (e) { const s2 = $("#keyStatus"); if (s2) { s2.textContent = e.message; s2.className = "status err"; } }
 }
 export async function doExport() {
@@ -94,8 +95,13 @@ export async function doExport() {
     const file = new File([JSON.stringify(data)], name, { type: "application/json" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); }
     else { const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
-    if (st) { st.className = "status"; st.textContent = "Копия готова: " + data.entries.length + " записей, " + data.foods.length + " продуктов."; }
-  } catch (e) { if (st && e.name !== "AbortError") { st.className = "status err"; st.textContent = "Не удалось сохранить копию: " + e.message; } }
+    if (st) { st.className = "status"; st.textContent = t("backup.ready", { entries: data.entries.length, foods: data.foods.length }); }
+  } catch (e) { if (st && e.name !== "AbortError") { st.className = "status err"; st.textContent = t("backup.exportFailed", { msg: e.message }); } }
+}
+
+/** Text that lives in index.html (scanner overlay): elements carry data-i18n="key". */
+export function applyStaticText() {
+  for (const el of document.querySelectorAll("[data-i18n]")) el.textContent = t(el.dataset.i18n);
 }
 
 /* ---------- Event wiring (called once from main.js) ---------- */
@@ -105,17 +111,17 @@ export function bindEvents() {
     if (!file || !ui.sheet) return;
     const purpose = camPurpose;
     if (purpose === "scan") {
-      setStatus("Распознаём штрихкод…");
+      setStatus(t("scan.decoding"));
       let code = await decodeBarcode(file);
       if (!code && AI.ready()) {
-        setStatus("Полоски не распознались, просим Claude прочитать цифры…");
+        setStatus(t("scan.askAI", { provider: AI.label() }));
         try { code = (await readLabel(file)).barcode; } catch {}
       }
-      if (!code) return setStatus("Штрихкод не найден. Снимите ближе, чтобы штрихкод занимал большую часть фото, или введите цифры в поиск.", true);
+      if (!code) return setStatus(t("scan.notFound"), true);
       handleCode(code.trim());
     } else if (purpose === "label" || purpose === "labelForm") {
-      if (ui.sheet.step !== "food") openSheet({ step: "food", meal: ui.sheet.meal, food: { barcode: ui.sheet.pendingCode || null }, busy: true, status: "Читаем этикетку…" });
-      else { ui.sheet.busy = true; ui.sheet.status = "Читаем этикетку…"; ui.sheet.err = false; renderSheet(); }
+      if (ui.sheet.step !== "food") openSheet({ step: "food", meal: ui.sheet.meal, food: { barcode: ui.sheet.pendingCode || null }, busy: true, status: t("food.reading") });
+      else { ui.sheet.busy = true; ui.sheet.status = t("food.reading"); ui.sheet.err = false; renderSheet(); }
       try {
         const cur = readFoodForm();
         const r = await readLabel(file);
@@ -124,9 +130,9 @@ export function bindEvents() {
         if (!merged.barcode && r.barcode) merged.barcode = r.barcode;
         ui.sheet.food = merged; ui.sheet.busy = false;
         const missing = ["kcal", "protein", "fat", "carbs"].filter(k => merged[k] == null);
-        ui.sheet.status = missing.length ? "Заполнено то, что удалось прочитать. Добавьте: " + missing.map(k => ({kcal:"ккал",protein:"белки",fat:"жиры",carbs:"углеводы"})[k]).join(", ") + "." : "Заполнено по этикетке. Проверьте цифры и сохраните.";
+        ui.sheet.status = missing.length ? t("food.labelPartial", { missing: missing.map(k => k === "kcal" ? t("unit.kcal") : t("macro." + k + "Short")).join(", ") }) : t("food.labelDone");
         ui.sheet.err = !!missing.length; renderSheet();
-      } catch (e) { ui.sheet.busy = false; ui.sheet.status = (e?.message || "Не удалось прочитать этикетку."); ui.sheet.err = true; renderSheet(); }
+      } catch (e) { ui.sheet.busy = false; ui.sheet.status = (e?.message || t("food.labelFailed")); ui.sheet.err = true; renderSheet(); }
     }
   });
 
@@ -142,7 +148,7 @@ export function bindEvents() {
       case "back": openSheet({ step: "search", meal: ($("#mealSel")?.value) || ui.sheet.meal, q: ui.sheet.q0 || "", recent: ui.sheet.recent0 || [] }); Data.recent().then(r => { if (ui.sheet && ui.sheet.step === "search") { ui.sheet.recent = r; renderSheet(); } }); break;
       case "pick": {
         const src = b.dataset.src, id = b.dataset.id;
-        let f = src === "mine" ? S.foods.find(x => x.id === id) : src === "generic" ? GENERIC.find(x => x.id === id) : src === "off" ? (ui.sheet.offResults || []).find(x => x.id === id) : null;
+        let f = src === "mine" ? S.foods.find(x => x.id === id) : src === "generic" ? genericFoods().find(x => x.id === id) : src === "off" ? (ui.sheet.offResults || []).find(x => x.id === id) : null;
         if (src === "recent") { const e = ui.sheet.recent.find(x => "r:" + x.name === id); if (e) f = { name: e.name, ...e.per100, source: "recent", lastGrams: e.grams }; }
         if (!f) return;
         f = { ...f, source: src };
@@ -152,11 +158,11 @@ export function bindEvents() {
       }
       case "unit": ui.sheet.unit = b.dataset.u; renderSheet(); break;
       case "addEntry": {
-        const grams = +ui.sheet.grams; if (!(grams > 0)) return setStatus("Укажите количество.", true);
+        const grams = +ui.sheet.grams; if (!(grams > 0)) return setStatus(t("amount.enterQty"), true);
         const meal = $("#mealSel").value; const e = entryFromFood(ui.sheet.food, grams, meal);
         const fd = ui.sheet.food; closeSheet();
         if (fd.source === "off" && !S.foods.some(x => x.barcode === fd.barcode)) { const { id, source, ...keep } = fd; try { const nid = await Data.addFood({ ...keep, source: "off" }); e.foodId = nid; } catch {} }
-        await safe(Data.addEntry(e), `«${e.name}» добавлено: ${mealLabel(meal)}.`); break;
+        await safe(Data.addEntry(e), t("amount.added", { name: e.name, meal: mealLabel(meal) })); break;
       }
       case "editEntry": {
         const e = S.entries.find(x => x.id === b.dataset.id); if (!e) return;
@@ -166,18 +172,18 @@ export function bindEvents() {
       case "saveEntry": {
         const grams = +ui.sheet.grams; if (!(grams > 0)) return;
         const m = scale(ui.sheet.food, grams), meal = $("#mealSel").value, id = ui.sheet.id;
-        closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), "Сохранено."); break;
+        closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), t("amount.saved")); break;
       }
       case "askDel": ui.sheet.confirmDel = true; renderSheet(); break;
-      case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), "Удалено."); break; }
-      case "toAI": if (!AI.ready()) return setStatus("Чтобы описывать еду словами, добавьте ключ ИИ в «Настройках».", true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
+      case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), t("amount.deleted")); break; }
+      case "toAI": if (!AI.ready()) return setStatus(t("ai.needKeyDescribe"), true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
       case "runAI": runAI(); break;
       case "aiDrop": ui.sheet.text = $("#aitext").value; ui.sheet.items.splice(+b.dataset.i, 1); renderSheet(); break;
       case "aiAdd": {
         const meal = ui.sheet.meal, items = ui.sheet.items; closeSheet();
         const list = items.map(i => ({ date: S.date, meal, name: i.name, grams: r1(i.grams), kcal: r1(i.kcal), protein: r1(i.protein), fat: r1(i.fat), carbs: r1(i.carbs),
           per100: { kcal: r1(i.kcal / i.grams * 100), protein: r1(i.protein / i.grams * 100), fat: r1(i.fat / i.grams * 100), carbs: r1(i.carbs / i.grams * 100), serving: null }, foodId: null, estimated: true }));
-        await safe(Data.addEntries(list), `Добавлено в «${mealLabel(meal)}»: ${list.length} шт.`); break;
+        await safe(Data.addEntries(list), t("describe.added", { meal: mealLabel(meal), n: list.length })); break;
       }
       case "scan": ui.sheet.status = ""; startScanner({ onCode: c => { if (ui.sheet) handleCode(c); }, onPhoto: () => pickPhoto("scan"), onError: msg => setStatus(msg, true) }); break;
       case "scanClose": stopScanner(); break;
@@ -186,36 +192,39 @@ export function bindEvents() {
       case "import": $("#importInput").value = ""; $("#importInput").click(); break;
       case "testKey": testKey(); break;
       case "askDelKey": S.confirmKeyDel = true; render(); break;
-      case "delKey": AI.keys[AI.provider] = null; S.confirmKeyDel = false; await saveAISettings(); render(); toast("Ключ удалён."); break;
+      case "delKey": AI.keys[AI.provider] = null; S.confirmKeyDel = false; await saveAISettings(); render(); toast(t("ai.keyDeleted")); break;
       case "provider": AI.provider = b.dataset.p; S.confirmKeyDel = false; await saveAISettings(); render(); break;
       case "offSearch": runOffSearch(); break;
-      case "labelPhoto": if (!AI.ready()) return setStatus("Чтобы читать этикетки, добавьте ключ ИИ в «Настройках».", true); pickPhoto("label"); break;
-      case "labelIntoForm": ui.sheet.food = readFoodForm(); if (!AI.ready()) return setStatus("Чтобы читать этикетки, добавьте ключ ИИ в «Настройках».", true); pickPhoto("labelForm"); break;
+      case "labelPhoto": if (!AI.ready()) return setStatus(t("ai.needKeyLabel"), true); pickPhoto("label"); break;
+      case "labelIntoForm": ui.sheet.food = readFoodForm(); if (!AI.ready()) return setStatus(t("ai.needKeyLabel"), true); pickPhoto("labelForm"); break;
       case "newFood": openSheet({ step: "food", meal: ui.sheet?.meal || null, food: { name: ui.sheet?.q || "" }, q0: ui.sheet?.q, recent0: ui.sheet?.recent }); break;
       case "editFood": { const f = S.foods.find(x => x.id === b.dataset.id); if (f) openSheet({ step: "food", id: f.id, food: { ...f } }); break; }
       case "askDelFood": ui.sheet.food = readFoodForm(); ui.sheet.confirmDel = true; renderSheet(); break;
-      case "delFood": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteFood(id), "Продукт удалён."); break; }
+      case "delFood": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteFood(id), t("food.deleted")); break; }
     }
   });
 
   document.addEventListener("input", ev => {
-    const t = ev.target;
+    const el = ev.target;
     if (!ui.sheet) {
-      if (t.id && t.id.startsWith("g-")) {
+      if (el.id && el.id.startsWith("g-")) {
         const n = id => +($("#" + id)?.value || 0);
-        const el = $("#g-calc"); if (el) el.textContent = Math.round(n("g-protein") * 4 + n("g-fat") * 9 + n("g-carbs") * 4) + " kcal";
+        const calc = $("#g-calc"); if (calc) calc.textContent = Math.round(n("g-protein") * 4 + n("g-fat") * 9 + n("g-carbs") * 4) + " " + t("unit.kcal");
       }
       return;
     }
-    if (t.id === "q") { ui.sheet.q = t.value; ui.sheet.status = ""; renderSheet(); }
-    else if (t.id === "amt") {
-      const v = parseFloat(String(t.value).replace(",", ".")) || 0;
+    if (el.id === "q") { ui.sheet.q = el.value; ui.sheet.status = ""; renderSheet(); }
+    else if (el.id === "amt") {
+      const v = parseFloat(String(el.value).replace(",", ".")) || 0;
       ui.sheet.grams = ui.sheet.unit === "srv" ? v * ui.sheet.food.serving : v;
       const pv = $("#pv"); if (pv) pv.innerHTML = previewHTML(scale(ui.sheet.food, ui.sheet.grams));
     }
-    else if (t.id === "aitext") ui.sheet.text = t.value;
+    else if (el.id === "aitext") ui.sheet.text = el.value;
   });
-  document.addEventListener("change", ev => { if (ui.sheet && ev.target.id === "mealSel") ui.sheet.meal = ev.target.value; });
+  document.addEventListener("change", async ev => {
+    if (ui.sheet && ev.target.id === "mealSel") ui.sheet.meal = ev.target.value;
+    if (ev.target.id === "langSel") { setLang(ev.target.value); applyStaticText(); await IDB.put("kv", I18N.choice, "lang"); render(); }
+  });
   document.addEventListener("keydown", ev => {
     if (ev.key === "Escape" && ui.sheet) closeSheet();
     if (ev.key === "Enter" && ui.sheet?.step === "search" && ev.target.id === "q") {
@@ -227,7 +236,7 @@ export function bindEvents() {
     ev.preventDefault();
     if (ev.target.id === "goalsForm") {
       const n = id => Math.max(0, Math.round(+$("#" + id).value || 0));
-      await safe(Data.saveGoals({ kcal: n("g-kcal") || DEFAULT_GOALS.kcal, protein: n("g-protein"), fat: n("g-fat"), carbs: n("g-carbs") }), "Цели сохранены.");
+      await safe(Data.saveGoals({ kcal: n("g-kcal") || DEFAULT_GOALS.kcal, protein: n("g-protein"), fat: n("g-fat"), carbs: n("g-carbs") }), t("goals.saved"));
       S.goalsSet = true; render();
     }
     if (ev.target.id === "keyForm") {
@@ -235,7 +244,7 @@ export function bindEvents() {
       if (m) AI.geminiModel = m;
       if (k) {
         const bad = AI.provider === "claude" ? !/^sk-ant-/.test(k) : k.length < 20;
-        if (bad) { const st = $("#keyStatus"); st.textContent = AI.provider === "claude" ? "Ключ Claude начинается с «sk-ant-»." : "Это не похоже на ключ Gemini."; st.className = "status err"; return; }
+        if (bad) { const st = $("#keyStatus"); st.textContent = AI.provider === "claude" ? t("ai.badClaudeKey") : t("ai.badGeminiKey"); st.className = "status err"; return; }
         AI.keys[AI.provider] = k;
       }
       await saveAISettings(); S.confirmKeyDel = false; render(); if (AI.key) testKey();
@@ -243,23 +252,23 @@ export function bindEvents() {
     }
     if (ev.target.id === "foodForm") {
       const f = readFoodForm();
-      if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { ui.sheet.food = f; return setStatus("Заполните название и все четыре значения пищевой ценности.", true); }
-      if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; return setStatus("Продукт с таким штрихкодом уже есть в «Моих продуктах».", true); }
+      if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { ui.sheet.food = f; return setStatus(t("food.fillAll"), true); }
+      if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; return setStatus(t("food.duplicateBarcode"), true); }
       const meal = ui.sheet.meal, id = ui.sheet.id;
       try {
-        if (id) { await Data.updateFood(id, f); closeSheet(); toast("Продукт сохранён."); return; }
+        if (id) { await Data.updateFood(id, f); closeSheet(); toast(t("food.saved")); return; }
         const newId = await Data.addFood({ ...f, source: "custom" });
         if (meal) openSheet({ step: "amount", meal, food: { ...f, id: newId, source: "mine" }, grams: f.serving || 100, unit: f.serving ? "srv" : "g" });
-        else { closeSheet(); toast("Продукт сохранён."); }
-      } catch (e) { setStatus("Не удалось сохранить: " + (e?.message || "попробуйте ещё раз"), true); }
+        else { closeSheet(); toast(t("food.saved")); }
+      } catch (e) { setStatus(t("common.saveFailed", { msg: e?.message || t("common.tryAgain") }), true); }
     }
   });
 
   $("#importInput").addEventListener("change", async ev => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     // Look the status line up after the import: the import re-renders Settings and replaces the element.
-    try { const r = await Data.importAll(JSON.parse(await f.text())); const st = $("#bkStatus"); if (st) { st.className = "status"; st.textContent = "Восстановлено: " + r.entries + " записей, " + r.foods + " продуктов." + (r.skipped ? " Пропущено повреждённых записей: " + r.skipped + "." : ""); } }
-    catch (e) { const st = $("#bkStatus"); if (st) { st.className = "status err"; st.textContent = e.message || "Не удалось прочитать файл."; } }
+    try { const r = await Data.importAll(JSON.parse(await f.text())); const st = $("#bkStatus"); if (st) { st.className = "status"; st.textContent = t("backup.restored", { entries: r.entries, foods: r.foods }) + (r.skipped ? " " + t("backup.skipped", { n: r.skipped }) : ""); } }
+    catch (e) { const st = $("#bkStatus"); if (st) { st.className = "status err"; st.textContent = e.message || t("backup.readFailed"); } }
   });
   window.addEventListener("online", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });
   window.addEventListener("offline", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });

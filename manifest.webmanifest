@@ -1,7 +1,6 @@
 {
-  "name": "Yummer — дневник питания",
+  "name": "Yummer",
   "short_name": "Yummer",
-  "lang": "ru",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

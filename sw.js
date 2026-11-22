@@ -1,9 +1,14 @@
 // Yummer service worker: app shell works offline; API calls always go to the network.
-const VERSION = "yummer-v3";
+const VERSION = "yummer-v4";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "css/fonts.css", "css/styles.css",
   "js/actions.js",
   "js/data/foods.js",
   "js/data/store.js",
+  "js/i18n.js",
+  "js/i18n/de.js",
+  "js/i18n/en.js",
+  "js/i18n/pl.js",
+  "js/i18n/ru.js",
   "js/main.js",
   "js/services/ai.js",
   "js/services/barcode.js",

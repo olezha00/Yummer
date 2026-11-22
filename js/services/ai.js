@@ -1,4 +1,5 @@
 import { IDB, sanitizeLabel } from "../data/store.js";
+import { t } from "../i18n.js";
 import { blobToB64 } from "../util.js";
 
 /* ---------- AI: Google Gemini (free tier, default) or Claude, with the person's own key stored on this device ---------- */
@@ -9,8 +10,8 @@ export const AI = {
   ready() { return !!this.key; },
   label() { return this.provider === "gemini" ? "Gemini" : "Claude"; },
   async call(text, images, wantJSON, schema) {
-    if (!this.key) throw Object.assign(new Error("Добавьте ключ " + this.label() + " в «Настройках», чтобы пользоваться ИИ."), { code: "nokey" });
-    if (!navigator.onLine) throw Object.assign(new Error("Нет интернета."), { code: "offline" });
+    if (!this.key) throw Object.assign(new Error(t("ai.err.noKey", { provider: this.label() })), { code: "nokey" });
+    if (!navigator.onLine) throw Object.assign(new Error(t("ai.err.offline")), { code: "offline" });
     const b64 = []; for (const img of images || []) b64.push(await blobToB64(img));
     return this.provider === "gemini" ? this.gemini(text, b64, wantJSON) : this.claude(text, b64, schema);
   },
@@ -21,18 +22,18 @@ export const AI = {
       r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(this.geminiModel) + ":generateContent", {
         method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": this.key },
         body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: wantJSON ? { responseMimeType: "application/json" } : {} }) });
-    } catch { throw Object.assign(new Error("Не удалось связаться с Gemini. Попробуйте ещё раз."), { code: "net" }); }
+    } catch { throw Object.assign(new Error(t("ai.err.geminiNet")), { code: "net" }); }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       const msg = (j.error && j.error.message) || "";
-      if (r.status === 429) throw Object.assign(new Error("Бесплатный лимит Gemini на сейчас исчерпан. Подождите минуту (или до завтра, если кончился дневной лимит)."), { code: "rate" });
-      if (r.status === 404) throw Object.assign(new Error("Модель «" + this.geminiModel + "» не найдена. Укажите другую модель в «Настройках»."), { code: "model" });
-      if (r.status === 400 && /api key/i.test(msg) || r.status === 401 || r.status === 403) throw Object.assign(new Error("Ключ Gemini не подошёл. Проверьте его в «Настройках»."), { code: "auth" });
-      throw Object.assign(new Error("Gemini вернул ошибку " + r.status + (msg ? ": " + msg : "")), { code: "bad" });
+      if (r.status === 429) throw Object.assign(new Error(t("ai.err.geminiRate")), { code: "rate" });
+      if (r.status === 404) throw Object.assign(new Error(t("ai.err.geminiModel", { model: this.geminiModel })), { code: "model" });
+      if (r.status === 400 && /api key/i.test(msg) || r.status === 401 || r.status === 403) throw Object.assign(new Error(t("ai.err.geminiAuth")), { code: "auth" });
+      throw Object.assign(new Error(t("ai.err.geminiStatus", { status: r.status, msg: msg ? ": " + msg : "" })), { code: "bad" });
     }
     const c = j.candidates && j.candidates[0];
     const out = c && c.content && (c.content.parts || []).map(x => x.text || "").join("");
-    if (!out) throw Object.assign(new Error("Gemini не дал ответа" + (c && c.finishReason ? " (" + c.finishReason + ")" : "") + ". Попробуйте ещё раз."), { code: "empty" });
+    if (!out) throw Object.assign(new Error(t("ai.err.geminiEmpty", { reason: c && c.finishReason ? " (" + c.finishReason + ")" : "" })), { code: "empty" });
     return out;
   },
   async claude(text, b64, schema) {
@@ -49,19 +50,19 @@ export const AI = {
       });
     } catch (e) {
       const st = e && e.status;
-      if (st === 401) throw Object.assign(new Error("Ключ Claude не подошёл. Проверьте его в «Настройках»."), { code: "auth" });
-      if (st === 429) throw Object.assign(new Error("Слишком много запросов. Подождите минуту и попробуйте снова."), { code: "rate" });
-      if (st === 400) throw Object.assign(new Error("Запрос не принят: " + (e.message || "")), { code: "bad" });
-      throw Object.assign(new Error("Не удалось связаться с Claude. Попробуйте ещё раз."), { code: "net" });
+      if (st === 401) throw Object.assign(new Error(t("ai.err.claudeAuth")), { code: "auth" });
+      if (st === 429) throw Object.assign(new Error(t("ai.err.claudeRate")), { code: "rate" });
+      if (st === 400) throw Object.assign(new Error(t("ai.err.claudeBad", { msg: e.message || "" })), { code: "bad" });
+      throw Object.assign(new Error(t("ai.err.claudeNet")), { code: "net" });
     }
-    if (res.stop_reason === "refusal") throw Object.assign(new Error("Claude отказался обработать этот запрос."), { code: "refusal" });
+    if (res.stop_reason === "refusal") throw Object.assign(new Error(t("ai.err.refusal")), { code: "refusal" });
     return res.content.filter(b => b.type === "text").map(b => b.text).join("");
   },
   async text(prompt) { return this.call(prompt, [], false); },
   async json(prompt, schema, images) {
-    const t = await this.call(prompt, images, true, schema);
-    const x = t.indexOf("{"), y = t.lastIndexOf("}");
-    return JSON.parse(x >= 0 ? t.slice(x, y + 1) : t);
+    const out = await this.call(prompt, images, true, schema);
+    const x = out.indexOf("{"), y = out.lastIndexOf("}");
+    return JSON.parse(x >= 0 ? out.slice(x, y + 1) : out);
   },
 };
 export async function saveAISettings() { await IDB.put("kv", { provider: AI.provider, keys: AI.keys, geminiModel: AI.geminiModel }, "ai"); }
@@ -91,6 +92,6 @@ export const ITEMS_SCHEMA = { type: "object", additionalProperties: false, requi
 export async function readLabel(file) {
   const img = await shrink(file);
   const out = await AI.json(LABEL_PROMPT, LABEL_SCHEMA, [img]);
-  if (!out || typeof out !== "object") throw new Error("Не удалось прочитать этикетку. Сделайте более чёткое фото поближе.");
+  if (!out || typeof out !== "object") throw new Error(t("ai.err.label"));
   return sanitizeLabel(out);
 }
