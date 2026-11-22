@@ -1,3 +1,4 @@
+import { tText } from "../i18n.js";
 import { $ } from "../util.js";
 
 /* ---------- Barcode decoding from a photo ---------- */
@@ -28,7 +29,7 @@ export let scanReader = null;
  *  onCode(text) when a code is read, onPhoto() to fall back to a photo, onError(message). */
 export async function startScanner({ onCode, onPhoto, onError }) {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.ZXing) { onPhoto(); return; }
-  const box = $("#scanner"), video = $("#scanVideo"); box.hidden = false; $("#scanHint").textContent = "Наведите камеру на штрихкод";
+  const box = $("#scanner"), video = $("#scanVideo"); box.hidden = false; $("#scanHint").textContent = tText("scan.hint");
   try {
     const hints = new Map();
     hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.QR_CODE]);
@@ -41,7 +42,7 @@ export async function startScanner({ onCode, onPhoto, onError }) {
     });
   } catch (e) {
     stopScanner();
-    onError(e && e.name === "NotAllowedError" ? "Нет доступа к камере. Разрешите камеру для Yummer в настройках Safari, или сделайте фото штрихкода." : "Камера недоступна, откроем фото.");
+    onError(e && e.name === "NotAllowedError" ? tText("scan.noCamera") : tText("scan.cameraUnavailable"));
     if (!(e && e.name === "NotAllowedError")) onPhoto();
   }
 }

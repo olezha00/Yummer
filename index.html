@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -22,7 +22,7 @@
 
 <div class="wrap" id="app">
   <header class="top"><div class="brand">Yummer</div></header>
-  <p class="muted">Загружаем дневник…</p>
+  <p class="muted" data-i18n="app.loading">…</p>
 </div>
 <div id="sheetRoot"></div>
 <input type="file" id="camInput" accept="image/*" capture="environment" hidden>
@@ -31,9 +31,9 @@
   <video id="scanVideo" playsinline muted autoplay></video>
   <div class="frame"></div>
   <div class="bar">
-    <div class="hint" id="scanHint">Наведите камеру на штрихкод</div>
-    <button class="btn block" data-act="scanPhoto">Сделать фото вместо этого</button>
-    <button class="btn block" data-act="scanClose">Отмена</button>
+    <div class="hint" id="scanHint" data-i18n="scan.hint"></div>
+    <button class="btn block" data-act="scanPhoto" data-i18n="scan.photoInstead"></button>
+    <button class="btn block" data-act="scanClose" data-i18n="scan.cancel"></button>
   </div>
 </div>
 

@@ -27,3 +27,8 @@ test("offToFood skips hits without a real barcode", () => {
   assert.equal(offToFood({ code: "abc", product_name: "X", nutriments: n }), null);
   assert.equal(offToFood(null), null);
 });
+test("offToFood prefers the product name in the UI language, then Polish", () => {
+  const p = { code: "12345678", product_name: "Default", product_name_pl: "Polska", product_name_de: "Deutsch", nutriments: {} };
+  assert.equal(offToFood(p, "de").name, "Deutsch");
+  assert.equal(offToFood(p, "ru").name, "Polska");
+});

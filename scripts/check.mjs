@@ -1,7 +1,8 @@
 // Syntax-checks every app module and confirms each relative import points at a real export.
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, dirname, resolve } from "node:path";
+import { join, dirname, resolve, sep } from "node:path";
 import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const files = [];
 (function walk(d) { for (const f of readdirSync(d)) { const p = join(d, f); statSync(p).isDirectory() ? walk(p) : p.endsWith(".js") && files.push(p); } })("js");
@@ -44,6 +45,29 @@ const shipped = [...files, "css/styles.css", "css/fonts.css",
   ...readdirSync("vendor").filter(f => f.endsWith(".js")).map(f => "vendor/" + f)];
 for (const f of shipped) if (!shell.has(f.split("\\").join("/"))) { failed = true; console.error(`${f} is not listed in SHELL in sw.js`); }
 
+// Every language has the same keys and the same {placeholders}; no UI text is hard-coded outside js/i18n/.
+const dicts = await Promise.all(["ru", "en", "pl", "de"].map(async l => [l, Object.values(await import(pathToFileURL(resolve("js/i18n", l + ".js")).href))[0]]));
+const ph = s => [...s.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort().join(",");
+const [, base] = dicts[0];
+for (const [l, d] of dicts) {
+  for (const k of Object.keys(base)) {
+    if (!(k in d)) { failed = true; console.error(`js/i18n/${l}.js is missing "${k}"`); }
+    else if (ph(d[k]) !== ph(base[k])) { failed = true; console.error(`js/i18n/${l}.js "${k}" has placeholders {${ph(d[k])}}, ru has {${ph(base[k])}}`); }
+  }
+  for (const k of Object.keys(d)) if (!(k in base)) { failed = true; console.error(`js/i18n/${l}.js has extra key "${k}"`); }
+}
+const usedKeys = new Set();
+for (const f of files) {
+  const src = readFileSync(f, "utf8");
+  for (const m of src.matchAll(/\bt(?:Text)?\("([\w.]*\w)"/g)) usedKeys.add(m[1]);
+  // t() HTML-escapes its values, so it belongs in js/ui/ templates; elsewhere text goes to textContent/Errors via tText().
+  if (!f.includes(`ui${sep}`) && /import \{[^}]*\bt\b[^}]*\} from "[^"]*i18n\.js"/.test(src)) { failed = true; console.error(`${f} imports t(): outside js/ui/ use tText()`); }
+  // A local variable or parameter named `t` would hide the translator and break rendering at runtime.
+  if (/import \{[^}]*\bt\b[^}]*\} from "[^"]*i18n\.js"/.test(src) && /(?:const|let|var)\s+t\b|\(\s*t\s*[,)]|\bt\s*=>/.test(src)) { failed = true; console.error(`${f} shadows the translator t(): rename the local variable`); }
+  if (!f.includes("i18n") && !f.endsWith("foods.js") && /[\u0400-\u04FF]/.test(src)) { failed = true; console.error(`${f} has Cyrillic text: move it to js/i18n/`); }
+}
+for (const k of usedKeys) if (!(k in base)) { failed = true; console.error(`t("${k}") is used but not defined in js/i18n/`); }
+
 // Vendored libraries must match their recorded checksums (supply-chain integrity).
 import("node:crypto").then(({ createHash }) => {
   for (const line of readFileSync("vendor/SHA256SUMS", "utf8").trim().split("\n")) {
@@ -56,5 +80,5 @@ import("node:crypto").then(({ createHash }) => {
   if (!/http-equiv="Content-Security-Policy"/.test(html)) { failed = true; console.error("index.html lost its Content-Security-Policy"); }
   if (/<script(?![^>]*\bsrc=)[^>]*>/.test(html) || /\son[a-z]+=/i.test(html)) { failed = true; console.error("index.html has inline script or on* handler"); }
   if (failed) process.exit(1);
-  console.log(`OK: ${files.length} modules, no import cycles, SHELL complete, vendor checksums and CSP checked.`);
+  console.log(`OK: ${files.length} modules, no import cycles, SHELL complete, ${dicts.length} languages with ${Object.keys(base).length} keys each, vendor checksums and CSP checked.`);
 });

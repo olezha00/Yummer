@@ -1,3 +1,5 @@
+import { locale, tText } from "./i18n.js";
+
 /* ---------- Helpers ---------- */
 export const $ = (s, r = document) => r.querySelector(s);
 export const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -9,9 +11,9 @@ export const fromKey = k => { const [y,m,d] = k.split("-").map(Number); return n
 export const shift = (k, n) => { const d = fromKey(k); d.setDate(d.getDate() + n); return dkey(d); };
 export const today = () => dkey(new Date());
 export function dateLabel(k) {
-  const t = today();
-  if (k === t) return "Сегодня"; if (k === shift(t, -1)) return "Вчера"; if (k === shift(t, 1)) return "Завтра";
-  return fromKey(k).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "short" });
+  const td = today();
+  if (k === td) return tText("day.today"); if (k === shift(td, -1)) return tText("day.yesterday"); if (k === shift(td, 1)) return tText("day.tomorrow");
+  return fromKey(k).toLocaleDateString(locale(), { weekday: "short", day: "numeric", month: "short" });
 }
 export const scale = (f, g) => ({ kcal: f.kcal * g / 100, protein: f.protein * g / 100, fat: f.fat * g / 100, carbs: f.carbs * g / 100 });
 export const uidLocal = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

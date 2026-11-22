@@ -2,6 +2,8 @@
 
 A personal food diary for iPhone, built as an installable web app. It tracks calories and macros, scans barcodes with the camera, looks products up in Open Food Facts, and can estimate meals with AI (Gemini's free tier by default, or Claude, using your own key).
 
+The app is in Russian, English, Polish and German. It follows the phone's language (English when the phone uses another language), and you can pick a language in Settings.
+
 Live app: https://olezha00.github.io/yummer/
 
 ## Install on iPhone
@@ -18,6 +20,8 @@ css/styles.css        all styles; colours are tokens with a dark theme
 css/fonts.css         self-hosted Onest and Inter (no request to Google Fonts)
 js/main.js            entry point: opens storage, loads settings, wires events, first render
 js/state.js           shared app state (S) and the open bottom sheet (ui.sheet)
+js/i18n.js            language choice (device or Settings) and t() for translated text
+js/i18n/*.js          UI text per language: ru, en, pl, de (same keys in each)
 js/util.js            small pure helpers: dates, rounding, escaping, text normalising
 js/actions.js         what happens on taps, typing and form submits (all event wiring)
 js/data/foods.js      built-in generic foods, meals, default goals
