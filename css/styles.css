@@ -141,3 +141,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .swipe .item { position: relative; z-index: 1; border-bottom: 0; background: var(--surface); transition: transform .2s ease; }
 .swipe-del { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; background: var(--warn); color: #fff; font-weight: 600; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .swipe .item { transition: none; } }
+
+/* Toast: floats above the tab bar so it is seen wherever the page is scrolled */
+.toast { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(68px + env(safe-area-inset-bottom, 0px)); z-index: 7; max-width: 528px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 14px; box-shadow: 0 4px 16px rgb(0 0 0 / .18); }
+.toast:empty { display: none; }
+.toast.err { background: var(--warn); color: #fff; }
+.toast-act { border: 0; background: none; color: inherit; font-weight: 700; padding: 4px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }

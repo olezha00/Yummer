@@ -36,6 +36,7 @@ export const en = {
   "common.back": "Back to search",
   "common.confirmDelete": "Tap again to delete",
   "common.saveFailed": "Couldn't save: {msg}",
+  "common.undo": "Undo",
   "common.tryAgain": "please try again",
   "common.offData": "Product data: {link}, ODbL licence.",
 

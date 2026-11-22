@@ -36,6 +36,7 @@ export const pl = {
   "common.back": "Wróć do wyszukiwania",
   "common.confirmDelete": "Naciśnij jeszcze raz, aby usunąć",
   "common.saveFailed": "Nie udało się zapisać: {msg}",
+  "common.undo": "Cofnij",
   "common.tryAgain": "spróbuj ponownie",
   "common.offData": "Dane o produktach: {link}, licencja ODbL.",
 

@@ -66,6 +66,8 @@ export const Data = {
     await watchDay();
   },
   async updateEntry(id, e) { const cur = (await IDB.get("entries", id)) || {}; await IDB.put("entries", clean({ ...cur, ...e, id })); await watchDay(); },
+  /** Puts back an entry exactly as it was (Undo after a delete). */
+  async restoreEntry(e) { await IDB.put("entries", e); await watchDay(); },
   async deleteEntry(id) { await IDB.del("entries", id); await watchDay(); },
   async recent() {
     // Newest first via the createdAt index; stops after 12 distinct foods instead of loading the whole diary.
