@@ -1,6 +1,18 @@
 // Yummer service worker: app shell works offline; API calls always go to the network.
-const VERSION = "yummer-v1";
-const SHELL = ["./", "index.html", "manifest.webmanifest", "vendor/anthropic.js", "vendor/zxing.min.js",
+const VERSION = "yummer-v2";
+const SHELL = ["./", "index.html", "manifest.webmanifest", "css/styles.css",
+  "js/actions.js",
+  "js/data/foods.js",
+  "js/data/store.js",
+  "js/main.js",
+  "js/services/ai.js",
+  "js/services/barcode.js",
+  "js/services/off.js",
+  "js/state.js",
+  "js/ui/sheet.js",
+  "js/ui/views.js",
+  "js/util.js",
+  "vendor/anthropic.js", "vendor/zxing.min.js",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
