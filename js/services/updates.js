@@ -1,7 +1,7 @@
 /* ---------- App updates ----------
    APP_VERSION must equal VERSION in sw.js (npm run check verifies it). Settings shows it, so it is
    easy to see which version a phone runs. */
-export const APP_VERSION = "yummer-v7";
+export const APP_VERSION = "yummer-v8";
 
 /**
  * Registers the service worker and makes new versions reach the Home Screen app:

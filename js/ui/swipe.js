@@ -2,7 +2,7 @@
    Markup: <div class="swipe"><button class="swipe-del">…</button><button class="item">…</button></div>
    The row (.item) slides left over the Delete button. Vertical scrolling is left to the browser
    (touch-action: pan-y), so only clearly horizontal drags are handled here. */
-export const DEL_WIDTH = 88;      // px, width of the Delete button
+export const DEL_WIDTH = 72;      // px, width of the Delete button (keep in sync with .swipe-del in styles.css)
 const SLOP = 8;                   // px a finger may move before we decide between scroll and swipe
 
 /** Where the row ends up: pure, so it is unit-tested. start is 0 (closed) or -DEL_WIDTH (open). */
