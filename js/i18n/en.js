@@ -43,6 +43,8 @@ export const en = {
   "diary.setGoals": "Set your own",
   "diary.eaten": "Eaten {n} kcal",
   "diary.goal": "Goal {n} kcal",
+  "diary.delete": "Delete",
+  "diary.deleteEntry": "Delete “{name}”",
   "diary.addFood": "Add food",
   "diary.dialAria": "Eaten {eaten} of {goal} kcal",
   "diary.left": "kcal left",

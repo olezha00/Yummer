@@ -5,6 +5,7 @@ import { AI, ITEMS_SCHEMA, readLabel, saveAISettings } from "./services/ai.js";
 import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
 import { offByBarcode, offComplete, offErrorText, offSearchLive } from "./services/off.js";
 import { S, ui } from "./state.js";
+import { bindSwipe, closeOpenRow } from "./ui/swipe.js";
 import { closeSheet, openSheet, previewHTML, readFoodForm, renderSheet, setStatus } from "./ui/sheet.js";
 import { render, toast } from "./ui/views.js";
 import { $, r1, scale, shift, today } from "./util.js";
@@ -106,6 +107,7 @@ export function applyStaticText() {
 
 /* ---------- Event wiring (called once from main.js) ---------- */
 export function bindEvents() {
+  bindSwipe();
   $("#camInput").addEventListener("change", async ev => {
     const file = ev.target.files && ev.target.files[0];
     if (!file || !ui.sheet) return;
@@ -175,6 +177,7 @@ export function bindEvents() {
         closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), tText("amount.saved")); break;
       }
       case "askDel": ui.sheet.confirmDel = true; renderSheet(); break;
+      case "swipeDel": { closeOpenRow(); await safe(Data.deleteEntry(b.dataset.id), tText("amount.deleted")); break; }
       case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), tText("amount.deleted")); break; }
       case "toAI": if (!AI.ready()) return setStatus(tText("ai.needKeyDescribe"), true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
       case "runAI": runAI(); break;
