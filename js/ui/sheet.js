@@ -100,15 +100,15 @@ export function sheetAI(s) {
 
 export function sheetFood(s) {
   const f = s.food || {};
-  const v = k => f[k] == null ? "" : f[k];
+  const v = k => f[k] == null ? "" : esc(f[k]);
   return `<h3>${s.id ? "Изменить продукт" : "Новый продукт"}<button data-act="close" aria-label="Закрыть">✕</button></h3>
     <form class="stack" id="foodForm">
       <button type="button" class="btn" data-act="labelIntoForm">${s.busy ? "Читаем этикетку…" : "Заполнить по фото этикетки"}</button>
       <div class="status ${s.err ? "err" : ""}">${esc(s.status || "")}</div>
-      <div class="field"><label for="f-name">Название</label><input id="f-name" type="text" required value="${esc(v("name"))}" placeholder="например: Skyr pitny waniliowy"></div>
+      <div class="field"><label for="f-name">Название</label><input id="f-name" type="text" required value="${v("name")}" placeholder="например: Skyr pitny waniliowy"></div>
       <div class="grid2">
-        <div class="field"><label for="f-brand">Бренд (необязательно)</label><input id="f-brand" type="text" value="${esc(v("brand"))}"></div>
-        <div class="field"><label for="f-barcode">Штрихкод (необязательно)</label><input id="f-barcode" type="text" inputmode="numeric" value="${esc(v("barcode"))}"></div>
+        <div class="field"><label for="f-brand">Бренд (необязательно)</label><input id="f-brand" type="text" value="${v("brand")}"></div>
+        <div class="field"><label for="f-barcode">Штрихкод (необязательно)</label><input id="f-barcode" type="text" inputmode="numeric" value="${v("barcode")}"></div>
       </div>
       <p class="small muted" style="margin:0">Пищевая ценность на 100 г (или 100 мл)</p>
       <div class="grid4">

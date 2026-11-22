@@ -54,10 +54,40 @@ export const Data = {
   },
   async importAll(d) {
     if (!d || d.app !== "yummer" || !Array.isArray(d.entries) || !Array.isArray(d.foods)) throw new Error("Это не файл резервной копии Yummer.");
-    for (const f of d.foods) if (f && f.id) await IDB.put("foods", f);
-    for (const e of d.entries) if (e && e.id && e.date) await IDB.put("entries", e);
-    if (d.goals) await this.saveGoals(d.goals);
+    const foods = d.foods.map(sanitizeFood).filter(Boolean), entries = d.entries.map(sanitizeEntry).filter(Boolean);
+    for (const f of foods) await IDB.put("foods", f);
+    for (const e of entries) await IDB.put("entries", e);
+    const goals = sanitizeGoals(d.goals);
+    if (goals) await this.saveGoals(goals);
     await reloadFoods(); await watchDay();
-    return { foods: d.foods.length, entries: d.entries.length };
+    return { foods: foods.length, entries: entries.length, skipped: d.foods.length + d.entries.length - foods.length - entries.length };
   },
 };
+
+/* ---------- Backup validation: only well-formed records are stored ---------- */
+const num = (v, max = 100000) => { const n = Number(v); return Number.isFinite(n) && n >= 0 && n <= max ? Math.round(n * 10) / 10 : null; };
+const str = (v, max = 200) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
+const id = v => (typeof v === "string" && /^[\w-]{1,64}$/.test(v) ? v : null);
+const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snacks"];
+function macros(o) { const m = { kcal: num(o.kcal), protein: num(o.protein), fat: num(o.fat), carbs: num(o.carbs) }; return Object.values(m).every(x => x != null) ? m : null; }
+
+export function sanitizeFood(f) {
+  if (!f || typeof f !== "object") return null;
+  const m = macros(f), fid = id(f.id), name = str(f.name);
+  if (!m || !fid || !name) return null;
+  const barcode = typeof f.barcode === "string" && /^\d{6,14}$/.test(f.barcode) ? f.barcode : null;
+  return { id: fid, name, brand: str(f.brand, 100), barcode, ...m, serving: num(f.serving, 5000), source: str(f.source, 20), createdAt: num(f.createdAt, 1e13) || Date.now() };
+}
+export function sanitizeEntry(e) {
+  if (!e || typeof e !== "object") return null;
+  const m = macros(e), eid = id(e.id), name = str(e.name), grams = num(e.grams, 10000);
+  if (!m || !eid || !name || grams == null || typeof e.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(e.date) || !MEAL_KEYS.includes(e.meal)) return null;
+  const per = e.per100 && macros(e.per100);
+  return { id: eid, date: e.date, meal: e.meal, name, grams, ...m, per100: per ? { ...per, serving: num(e.per100.serving, 5000) } : null,
+    foodId: id(e.foodId), estimated: e.estimated === true || undefined, createdAt: num(e.createdAt, 1e13) || Date.now() };
+}
+export function sanitizeGoals(g) {
+  if (!g || typeof g !== "object") return null;
+  const out = { kcal: num(g.kcal, 10000), protein: num(g.protein, 1000), fat: num(g.fat, 1000), carbs: num(g.carbs, 2000) };
+  return Object.values(out).every(x => x != null) ? out : null;
+}

@@ -24,5 +24,17 @@ for (const f of files) {
       if (!names.has(n)) { failed = true; console.error(`${f}: "${n}" is not exported by ${m[2]}`); }
   }
 }
-if (failed) process.exit(1);
-console.log(`OK: ${files.length} modules checked.`);
+// Vendored libraries must match their recorded checksums (supply-chain integrity).
+import("node:crypto").then(({ createHash }) => {
+  for (const line of readFileSync("vendor/SHA256SUMS", "utf8").trim().split("\n")) {
+    const [hash, name] = line.split(/\s+/);
+    const actual = createHash("sha256").update(readFileSync(join("vendor", name))).digest("hex");
+    if (actual !== hash) { failed = true; console.error(`vendor/${name} does not match vendor/SHA256SUMS`); }
+  }
+  // No inline scripts or inline event handlers: the Content-Security-Policy forbids them.
+  const html = readFileSync("index.html", "utf8");
+  if (!/http-equiv="Content-Security-Policy"/.test(html)) { failed = true; console.error("index.html lost its Content-Security-Policy"); }
+  if (/<script(?![^>]*\bsrc=)[^>]*>/.test(html) || /\son[a-z]+=/i.test(html)) { failed = true; console.error("index.html has inline script or on* handler"); }
+  if (failed) process.exit(1);
+  console.log(`OK: ${files.length} modules, vendor checksums and CSP checked.`);
+});

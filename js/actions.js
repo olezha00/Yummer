@@ -260,7 +260,7 @@ export function bindEvents() {
   $("#importInput").addEventListener("change", async ev => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     const st = $("#bkStatus");
-    try { const r = await Data.importAll(JSON.parse(await f.text())); if (st) { st.className = "status"; st.textContent = "Восстановлено: " + r.entries + " записей, " + r.foods + " продуктов."; } }
+    try { const r = await Data.importAll(JSON.parse(await f.text())); if (st) { st.className = "status"; st.textContent = "Восстановлено: " + r.entries + " записей, " + r.foods + " продуктов." + (r.skipped ? " Пропущено повреждённых записей: " + r.skipped + "." : ""); } }
     catch (e) { if (st) { st.className = "status err"; st.textContent = e.message || "Не удалось прочитать файл."; } }
   });
   window.addEventListener("online", () => { if (ui.sheet && ui.sheet.step === "search") renderSheet(); });

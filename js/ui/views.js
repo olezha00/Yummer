@@ -84,11 +84,11 @@ export function viewGoals() {
   const g = S.goals, kFromMacros = Math.round(g.protein * 4 + g.fat * 9 + g.carbs * 4);
   return `<div class="section-title">Цели на день</div>
   <form class="card stack" id="goalsForm">
-    <div class="field"><label for="g-kcal">Калории (ккал)</label><input id="g-kcal" type="number" inputmode="numeric" min="800" max="6000" value="${g.kcal}"></div>
+    <div class="field"><label for="g-kcal">Калории (ккал)</label><input id="g-kcal" type="number" inputmode="numeric" min="800" max="6000" value="${esc(g.kcal)}"></div>
     <div class="grid2">
-      <div class="field"><label for="g-protein">Белки (г)</label><input id="g-protein" type="number" inputmode="numeric" min="0" value="${g.protein}"></div>
-      <div class="field"><label for="g-fat">Жиры (г)</label><input id="g-fat" type="number" inputmode="numeric" min="0" value="${g.fat}"></div>
-      <div class="field"><label for="g-carbs">Углеводы (г)</label><input id="g-carbs" type="number" inputmode="numeric" min="0" value="${g.carbs}"></div>
+      <div class="field"><label for="g-protein">Белки (г)</label><input id="g-protein" type="number" inputmode="numeric" min="0" value="${esc(g.protein)}"></div>
+      <div class="field"><label for="g-fat">Жиры (г)</label><input id="g-fat" type="number" inputmode="numeric" min="0" value="${esc(g.fat)}"></div>
+      <div class="field"><label for="g-carbs">Углеводы (г)</label><input id="g-carbs" type="number" inputmode="numeric" min="0" value="${esc(g.carbs)}"></div>
       <div class="field"><label>По БЖУ</label><div class="num" style="padding:10px 0" id="g-calc">${kFromMacros} ккал</div></div>
     </div>
     <p class="small muted">В грамме белков и углеводов 4 ккал, в грамме жиров 9. Сумма по БЖУ должна быть близка к цели по калориям.</p>
