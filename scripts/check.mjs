@@ -43,6 +43,9 @@ const shell = new Set([...sw.slice(sw.indexOf("SHELL"), sw.indexOf("];")).matchA
 const shipped = [...files, "css/styles.css", "css/fonts.css",
   ...readdirSync("fonts").filter(f => f.endsWith(".woff2")).map(f => "fonts/" + f),
   ...readdirSync("vendor").filter(f => f.endsWith(".js")).map(f => "vendor/" + f)];
+const swVersion = (sw.match(/const VERSION = "([^"]+)"/) || [])[1];
+const appVersion = (readFileSync("js/services/updates.js", "utf8").match(/APP_VERSION = "([^"]+)"/) || [])[1];
+if (!swVersion || swVersion !== appVersion) { failed = true; console.error(`sw.js VERSION (${swVersion}) must equal APP_VERSION in js/services/updates.js (${appVersion})`); }
 for (const f of shipped) if (!shell.has(f.split("\\").join("/"))) { failed = true; console.error(`${f} is not listed in SHELL in sw.js`); }
 
 // Every language has the same keys and the same {placeholders}; no UI text is hard-coded outside js/i18n/.

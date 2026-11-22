@@ -4,7 +4,7 @@
 - No build step and no runtime dependencies beyond `vendor/`. Keep modules as plain ES modules that load in Safari on iOS.
 - The UI supports Russian, English, Polish and German. Never hard-code UI text: add a key to every file in `js/i18n/` and use `t("key")`. The default language follows the device; Settings can override it. Write strings plainly.
 - Before opening a PR run `npm run check` and `npm test`. Add a test in `tests/` for new pure logic.
-- New files under `js/`, `css/`, `fonts/` and `vendor/` must be listed in `SHELL` in `sw.js` (`npm run check` fails otherwise), and `VERSION` there bumped when shipped files change.
+- New files under `js/`, `css/`, `fonts/` and `vendor/` must be listed in `SHELL` in `sw.js` (`npm run check` fails otherwise), and `VERSION` there bumped when shipped files change, together with `APP_VERSION` in `js/services/updates.js` (`npm run check` compares them). Settings shows that version, so you can see what a phone runs.
 - Keep imports one-way: `ui/` and `actions.js` may import `data/` and `services/`, never the reverse. `data/` signals changes with `changed()` from `state.js`. `npm run check` fails on import cycles.
 - Never commit API keys. Keys are entered by the user in Settings and stored in IndexedDB only.
 
