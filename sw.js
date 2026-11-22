@@ -46,8 +46,9 @@ self.addEventListener("fetch", e => {
   e.respondWith(
     fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
-      // Safari refuses a redirected response for a page navigation ("./" → "index.html" on some hosts): rebuild it.
-      if (res.redirected && e.request.mode === "navigate") return new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
+      // Safari refuses a redirected response for a page navigation (e.g. /Yummer → /Yummer/). Send the browser
+      // a real redirect, so the address bar, and every relative path in the page, use the final URL.
+      if (res.redirected && e.request.mode === "navigate") return Response.redirect(res.url, 302);
       return res;
     }).catch(() => caches.match(e.request).then(r => r || (e.request.mode === "navigate" ? caches.match("index.html") : Response.error())))
   );

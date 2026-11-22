@@ -114,7 +114,7 @@ export function render() {
     <button data-act="day" data-d="1" aria-label="${t("day.next")}">›</button></div>` : ""}</header>`;
   const body = S.mode === "loading" ? `<p class="muted">${t("app.loading")}</p>` : S.tab === "diary" ? viewDiary() : S.tab === "foods" ? viewFoods() : viewSettings();
   const active = document.activeElement?.id;
-  app.innerHTML = head + body + `<div id="toast" class="toast" role="status">${toastHTML()}</div>`;
+  app.innerHTML = head + body + `<div id="toast" class="toast${S.toastErr ? " err" : ""}" role="status">${toastHTML()}</div>`;
   if (active && S.tab === "settings") { const el = document.getElementById(active); if (el) el.focus(); }
   renderTabs();
 }
