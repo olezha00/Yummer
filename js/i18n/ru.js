@@ -37,6 +37,7 @@ export const ru = {
   "common.back": "Назад к поиску",
   "common.confirmDelete": "Нажмите ещё раз, чтобы удалить",
   "common.saveFailed": "Не удалось сохранить: {msg}",
+  "common.undo": "Отменить",
   "common.tryAgain": "попробуйте ещё раз",
   "common.offData": "Данные о товарах: {link}, лицензия ODbL.",
 

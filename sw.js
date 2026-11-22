@@ -1,5 +1,5 @@
 // Yummer service worker: app shell works offline; API calls always go to the network.
-const VERSION = "yummer-v6"; // must equal APP_VERSION in js/services/updates.js
+const VERSION = "yummer-v7"; // must equal APP_VERSION in js/services/updates.js
 const SHELL = ["./", "index.html", "manifest.webmanifest", "css/fonts.css", "css/styles.css",
   "js/actions.js",
   "js/data/foods.js",
@@ -46,6 +46,8 @@ self.addEventListener("fetch", e => {
   e.respondWith(
     fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+      // Safari refuses a redirected response for a page navigation ("./" → "index.html" on some hosts): rebuild it.
+      if (res.redirected && e.request.mode === "navigate") return new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers });
       return res;
     }).catch(() => caches.match(e.request).then(r => r || (e.request.mode === "navigate" ? caches.match("index.html") : Response.error())))
   );

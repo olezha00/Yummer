@@ -7,7 +7,7 @@ import { offByBarcode, offComplete, offErrorText, offSearchLive } from "./servic
 import { S, ui } from "./state.js";
 import { bindSwipe, closeOpenRow } from "./ui/swipe.js";
 import { closeSheet, openSheet, previewHTML, readFoodForm, renderSheet, setStatus } from "./ui/sheet.js";
-import { render, toast } from "./ui/views.js";
+import { clearToast, render, toast } from "./ui/views.js";
 import { $, r1, scale, shift, today } from "./util.js";
 
 /* ---------- Photos (barcode or label) ---------- */
@@ -106,6 +106,9 @@ export function applyStaticText() {
 }
 
 /* ---------- Event wiring (called once from main.js) ---------- */
+/** The entry removed by the last swipe delete, kept so Undo can put it back. */
+let lastDeleted = null;
+
 export function bindEvents() {
   bindSwipe();
   $("#camInput").addEventListener("change", async ev => {
@@ -177,7 +180,14 @@ export function bindEvents() {
         closeSheet(); await safe(Data.updateEntry(id, { grams: r1(grams), meal, kcal: r1(m.kcal), protein: r1(m.protein), fat: r1(m.fat), carbs: r1(m.carbs) }), tText("amount.saved")); break;
       }
       case "askDel": ui.sheet.confirmDel = true; renderSheet(); break;
-      case "swipeDel": { closeOpenRow(); await safe(Data.deleteEntry(b.dataset.id), tText("amount.deleted")); break; }
+      case "swipeDel": {
+        closeOpenRow();
+        const e = S.entries.find(x => x.id === b.dataset.id); if (!e) return;
+        try { await Data.deleteEntry(e.id); lastDeleted = e; toast(tText("amount.deleted"), false, { label: tText("common.undo"), act: "undoDelete" }); }
+        catch (err) { toast(tText("common.saveFailed", { msg: err?.message || tText("common.tryAgain") }), true); }
+        break;
+      }
+      case "undoDelete": { const e = lastDeleted; lastDeleted = null; clearToast(); if (e) await safe(Data.restoreEntry(e)); break; }
       case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), tText("amount.deleted")); break; }
       case "toAI": if (!AI.ready()) return setStatus(tText("ai.needKeyDescribe"), true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
       case "runAI": runAI(); break;

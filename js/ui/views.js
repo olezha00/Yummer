@@ -114,7 +114,7 @@ export function render() {
     <button data-act="day" data-d="1" aria-label="${t("day.next")}">›</button></div>` : ""}</header>`;
   const body = S.mode === "loading" ? `<p class="muted">${t("app.loading")}</p>` : S.tab === "diary" ? viewDiary() : S.tab === "foods" ? viewFoods() : viewSettings();
   const active = document.activeElement?.id;
-  app.innerHTML = head + body + `<div id="toast" class="status" role="status" style="margin-top:12px">${esc(S.toast || "")}</div>`;
+  app.innerHTML = head + body + `<div id="toast" class="toast" role="status">${toastHTML()}</div>`;
   if (active && S.tab === "settings") { const el = document.getElementById(active); if (el) el.focus(); }
   renderTabs();
 }
@@ -125,4 +125,12 @@ export function renderTabs() {
     `<button data-act="tab" data-tab="${k}" ${S.tab === k ? 'aria-current="page"' : ""}>${l}</button>`).join("")}</div>`;
 }
 export let toastTimer;
-export function toast(msg, isErr) { S.toast = msg; const el = $("#toast"); if (el) { el.textContent = msg; el.className = "status" + (isErr ? " err" : ""); } clearTimeout(toastTimer); toastTimer = setTimeout(() => { S.toast = ""; const e2 = $("#toast"); if (e2) e2.textContent = ""; }, 4000); }
+/** Toast message above the tab bar. action = { label, act } adds a button (e.g. Undo) handled by data-act. */
+const toastHTML = () => S.toast ? `<span>${esc(S.toast)}</span>${S.toastAction ? `<button class="toast-act" data-act="${esc(S.toastAction.act)}">${esc(S.toastAction.label)}</button>` : ""}` : "";
+export function toast(msg, isErr, action) {
+  S.toast = msg; S.toastErr = !!isErr; S.toastAction = action || null;
+  const paint = () => { const el = $("#toast"); if (el) { el.innerHTML = toastHTML(); el.classList.toggle("err", S.toastErr); } };
+  paint(); clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { S.toast = ""; S.toastAction = null; paint(); }, action ? 6000 : 4000);
+}
+export function clearToast() { clearTimeout(toastTimer); S.toast = ""; S.toastAction = null; const el = $("#toast"); if (el) el.innerHTML = ""; }
