@@ -1,5 +1,5 @@
 // Yummer service worker: app shell works offline; API calls always go to the network.
-const VERSION = "yummer-v4";
+const VERSION = "yummer-v5"; // must equal APP_VERSION in js/services/updates.js
 const SHELL = ["./", "index.html", "manifest.webmanifest", "css/fonts.css", "css/styles.css",
   "js/actions.js",
   "js/data/foods.js",
@@ -13,6 +13,7 @@ const SHELL = ["./", "index.html", "manifest.webmanifest", "css/fonts.css", "css
   "js/services/ai.js",
   "js/services/barcode.js",
   "js/services/off.js",
+  "js/services/updates.js",
   "js/state.js",
   "js/ui/sheet.js",
   "js/ui/views.js",
@@ -23,7 +24,9 @@ const SHELL = ["./", "index.html", "manifest.webmanifest", "css/fonts.css", "css
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // cache: "reload" skips the browser HTTP cache (GitHub Pages lets it keep files for 10 minutes),
+  // so a new version never caches files from the old one.
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -36,10 +39,11 @@ self.addEventListener("fetch", e => {
     e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
     return;
   }
-  // Network first so updates arrive; cache when offline. Only page navigations fall back to index.html,
-  // so a missing script or image fails as itself instead of being answered with HTML.
+  // Network first so updates arrive; cache when offline. "no-cache" revalidates with the server instead of
+  // trusting the HTTP cache, so a just-deployed file is never mixed with stale ones.
+  // Only page navigations fall back to index.html, so a missing script fails as itself instead of returning HTML.
   e.respondWith(
-    fetch(e.request).then(res => {
+    fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
       return res;
     }).catch(() => caches.match(e.request).then(r => r || (e.request.mode === "navigate" ? caches.match("index.html") : Response.error())))

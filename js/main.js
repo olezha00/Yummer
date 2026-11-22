@@ -3,7 +3,8 @@ import { setLang, tText } from "./i18n.js";
 import { DEFAULT_GOALS } from "./data/foods.js";
 import { IDB, sanitizeGoals, watchDay } from "./data/store.js";
 import { AI } from "./services/ai.js";
-import { onChange, S } from "./state.js";
+import { watchForUpdates } from "./services/updates.js";
+import { onChange, S, ui } from "./state.js";
 import { render } from "./ui/views.js";
 
 /* Yummer entry point: open storage, load settings, wire events, render. */
@@ -21,7 +22,8 @@ async function init() {
   } catch (e) {
     S.mode = "error"; S.error = tText("app.storageError", { msg: e && e.message || e }); render();
   }
-  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  // Reload into a new version only when no bottom sheet (search, food form…) is open.
+  watchForUpdates({ canReload: () => !ui.sheet });
 }
 
 

@@ -1,6 +1,7 @@
 import { DEFAULT_GOALS, meals } from "../data/foods.js";
 import { deviceLang, DICTS, I18N, LANGS, raw, t } from "../i18n.js";
 import { AI } from "../services/ai.js";
+import { APP_VERSION } from "../services/updates.js";
 import { S } from "../state.js";
 import { $, dateLabel, esc, fm } from "../util.js";
 
@@ -78,7 +79,8 @@ export function viewSettings() {
     <div class="grid2"><button class="btn" data-act="export">${t("backup.export")}</button><button class="btn" data-act="import">${t("backup.import")}</button></div>
     <div class="status" id="bkStatus"></div>
   </div>
-  <p class="small muted" style="margin-top:18px">${offCredit()}</p>`;
+  <p class="small muted" style="margin-top:18px">${offCredit()}</p>
+  <p class="small muted" style="margin-top:4px">Yummer ${esc(APP_VERSION.replace("yummer-", ""))}</p>`;
 }
 export const offCredit = () => t("common.offData", { link: raw('<a href="https://world.openfoodfacts.org" target="_blank" rel="noopener" style="color:inherit">Open Food Facts</a>') });
 export function viewLanguage() {
