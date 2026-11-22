@@ -44,6 +44,8 @@ export const ru = {
   "diary.setGoals": "Задать свои",
   "diary.eaten": "Съедено {n} ккал",
   "diary.goal": "Цель {n} ккал",
+  "diary.delete": "Удалить",
+  "diary.deleteEntry": "Удалить «{name}»",
   "diary.addFood": "Добавить продукт",
   "diary.dialAria": "Съедено {eaten} из {goal} ккал",
   "diary.left": "ккал осталось",

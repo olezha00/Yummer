@@ -35,8 +35,9 @@ export function viewDiary() {
     const items = S.entries.filter(e => e.meal === key).sort((a, b) => a.createdAt - b.createdAt);
     const mt = totals(items);
     h += `<section class="meal"><div class="mhead"><h2>${label}</h2><span class="mk num">${items.length ? Math.round(mt.kcal) + " " + t("unit.kcal") : ""}</span></div><div class="list">`;
-    for (const e of items) h += `<button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}</div>
-      <div class="sub num">${fm(e.grams)} ${t("unit.g")} · ${dots(e)}</div></div><div class="kc num">${Math.round(e.kcal)}</div></button>`;
+    for (const e of items) h += `<div class="swipe"><button class="swipe-del" data-act="swipeDel" data-id="${esc(e.id)}" aria-label="${t("diary.deleteEntry", { name: e.name })}">${t("diary.delete")}</button>
+      <button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}</div>
+      <div class="sub num">${fm(e.grams)} ${t("unit.g")} · ${dots(e)}</div></div><div class="kc num">${Math.round(e.kcal)}</div></button></div>`;
     h += `<button class="addrow" data-act="add" data-meal="${key}">${t("diary.addFood")}</button></div></section>`;
   }
   return h;

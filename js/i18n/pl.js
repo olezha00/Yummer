@@ -43,6 +43,8 @@ export const pl = {
   "diary.setGoals": "Ustaw własne",
   "diary.eaten": "Zjedzono {n} kcal",
   "diary.goal": "Cel {n} kcal",
+  "diary.delete": "Usuń",
+  "diary.deleteEntry": "Usuń „{name}”",
   "diary.addFood": "Dodaj produkt",
   "diary.dialAria": "Zjedzono {eaten} z {goal} kcal",
   "diary.left": "kcal zostało",

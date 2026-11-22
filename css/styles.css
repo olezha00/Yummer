@@ -135,3 +135,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .scanner .hint { color: #fff; text-align: center; font-size: 14px; }
 .scanner .btn { background: rgb(255 255 255 / .92); color: #111; }
 .keybox { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; }
+
+/* Swipe left on a diary row to reveal Delete (js/ui/swipe.js) */
+.swipe { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); touch-action: pan-y; }
+.swipe .item { position: relative; z-index: 1; border-bottom: 0; background: var(--surface); transition: transform .2s ease; }
+.swipe-del { position: absolute; top: 0; right: 0; bottom: 0; width: 88px; border: 0; background: var(--warn); color: #fff; font-weight: 600; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .swipe .item { transition: none; } }
