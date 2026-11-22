@@ -14,3 +14,9 @@
 - New network hosts must be added to the Content-Security-Policy in `index.html`. Keep the page free of inline scripts.
 - Vendored libraries are pinned; update `vendor/SHA256SUMS` when replacing one.
 - Pin third-party GitHub Actions to a full commit SHA (with the version in a comment).
+
+## Review flow
+1. The developer (Claude) builds the change on a branch, runs the checks and a self-review, and opens a PR.
+2. A separate reviewer then reviews the PR against the OWASP Top 10 and for code quality and efficiency, and posts its findings as review comments on the PR.
+3. The developer fixes each finding, or replies explaining why it is not a problem, pushes, and resolves the thread. Security findings stay open until the owner decides.
+4. The owner approves and merges. Nobody else merges.
