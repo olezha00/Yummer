@@ -98,3 +98,20 @@ export async function readLabel(files) {
   if (!out || typeof out !== "object") throw new Error(tText("ai.err.label"));
   return sanitizeLabel(out);
 }
+
+/* ---------- Estimate a product by its name (when no database has it) ---------- */
+/** The prompt for estimateFood. The name is cut short and stripped of quotes so it stays a plain product name. */
+export function estimatePrompt(name, language) {
+  const n = String(name || "").replace(/["`\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 100);
+  return `You help with a food diary. Estimate typical nutrition per 100 g (or 100 ml) for this product as sold in Polish or other European shops:
+"""${n}"""
+If the text names a brand, use what you know about that brand's product; otherwise use a typical product of this kind.
+Return JSON only, no prose, in exactly this shape:
+{"name": string|null, "brand": string|null, "barcode": null, "kcal": number|null, "protein": number|null, "fat": number|null, "carbs": number|null, "serving": number|null}
+"carbs" is total carbohydrates. "serving" is a typical portion or pack size in grams, or null. Write the name in ${language}. Use null when the text is not a food.`;
+}
+export async function estimateFood(name) {
+  const out = await AI.json(estimatePrompt(name, tText("lang.prompt")), LABEL_SCHEMA);
+  if (!out || typeof out !== "object") throw new Error(tText("off.aiFailed"));
+  return { ...sanitizeLabel(out), barcode: null };
+}
