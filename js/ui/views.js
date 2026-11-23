@@ -21,6 +21,8 @@ export function macroBar(label, key, tot, g, color) {
   return `<div class="macro"><div class="row"><b>${label}</b><span class="num">${fm(tot[key])} / ${g[key]} ${t("unit.g")}</span></div>
     <div class="bar"><i style="width:${pct}%;background:var(${color})"></i></div></div>`;
 }
+/** Trash can icon for the swipe Delete button; the button carries the accessible label. */
+const TRASH = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>`;
 export const dots = e => `<span class="dots num"><i class="p">${fm(e.protein)}</i><i class="f">${fm(e.fat)}</i><i class="c">${fm(e.carbs)}</i></span>`;
 
 export function viewDiary() {
@@ -35,7 +37,7 @@ export function viewDiary() {
     const items = S.entries.filter(e => e.meal === key).sort((a, b) => a.createdAt - b.createdAt);
     const mt = totals(items);
     h += `<section class="meal"><div class="mhead"><h2>${label}</h2><span class="mk num">${items.length ? Math.round(mt.kcal) + " " + t("unit.kcal") : ""}</span></div><div class="list">`;
-    for (const e of items) h += `<div class="swipe"><button class="swipe-del" data-act="swipeDel" data-id="${esc(e.id)}" aria-label="${t("diary.deleteEntry", { name: e.name })}">${t("diary.delete")}</button>
+    for (const e of items) h += `<div class="swipe"><button class="swipe-del" data-act="swipeDel" data-id="${esc(e.id)}" aria-label="${t("diary.deleteEntry", { name: e.name })}">${TRASH}</button>
       <button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}</div>
       <div class="sub num">${fm(e.grams)} ${t("unit.g")} · ${dots(e)}</div></div><div class="kc num">${Math.round(e.kcal)}</div></button></div>`;
     h += `<button class="addrow" data-act="add" data-meal="${key}">${t("diary.addFood")}</button></div></section>`;
