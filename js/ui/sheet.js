@@ -78,7 +78,7 @@ export function sheetAmount(s) {
       ${isEdit ? `<button class="btn danger block" data-act="${s.confirmDel ? "delEntry" : "askDel"}">${s.confirmDel ? t("common.confirmDelete") : t("amount.delete")}</button>` : `<button class="btn block" data-act="back">${t("common.back")}</button>`}
     </div>`;
 }
-export const previewHTML = m => `<div><b>${Math.round(m.kcal)}</b><span>${t("unit.kcal")}</span></div><div><b style="color:var(--protein)">${fm(m.protein)}</b><span>${t("macro.proteinShort")}</span></div><div><b style="color:var(--fat)">${fm(m.fat)}</b><span>${t("macro.fatShort")}</span></div><div><b style="color:var(--carbs)">${fm(m.carbs)}</b><span>${t("macro.carbsShort")}</span></div>`;
+export const previewHTML = m => `<div><b>${Math.round(m.kcal)}</b><span>${t("unit.kcal")}</span></div><div><b style="color:var(--protein-ink)">${fm(m.protein)}</b><span>${t("macro.proteinShort")}</span></div><div><b style="color:var(--fat-ink)">${fm(m.fat)}</b><span>${t("macro.fatShort")}</span></div><div><b style="color:var(--carbs-ink)">${fm(m.carbs)}</b><span>${t("macro.carbsShort")}</span></div>`;
 const closeBtn = () => `<button data-act="close" aria-label="${t("common.close")}">✕</button>`;
 
 export function sheetAI(s) {
@@ -130,7 +130,7 @@ export function sheetFood(s) {
 function matchesBlock(list) {
   return `<div class="matches stack"><p class="small" style="margin:0"><b>${t("food.matchesTitle")}</b></p>
     <div class="list">${list.map(f => `<button type="button" class="item" data-act="useMatch" data-id="${esc(f.id)}"><div class="main"><div class="name"><span class="nm">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</span>${isOwnFood(f) ? ownTag() : ""}</div>
-      <div class="sub num">${f.barcode ? esc(f.barcode) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`).join("")}</div>
+      <div class="sub num">${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`).join("")}</div>
     <p class="small muted" style="margin:0">${t("food.matchesOther")}</p></div>`;
 }
 

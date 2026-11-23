@@ -56,7 +56,7 @@ export function viewFoods() {
   if (!foods.length) return h + `<div class="card empty">${t("foods.empty")}</div>`;
   h += `<div class="list">`;
   for (const f of foods) h += `<button class="item" data-act="editFood" data-id="${esc(f.id)}"><div class="main"><div class="name"><span class="nm">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</span>${isOwnFood(f) ? ownTag() : ""}</div>
-    <div class="sub num">${f.barcode ? "▮▯▮ " + esc(f.barcode) + " · " : ""}${dots(f)}</div></div><div class="kc num">${Math.round(f.kcal)}<span class="muted small"> ${t("unit.kcal")}</span></div></button>`;
+    <div class="sub num">${dots(f)}</div></div><div class="kc num">${Math.round(f.kcal)}<span class="muted small"> ${t("unit.kcal")}</span></div></button>`;
   return h + `</div>`;
 }
 
