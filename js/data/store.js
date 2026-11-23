@@ -135,6 +135,8 @@ export function sanitizeAIItem(i) {
 export function sanitizeLabel(r) {
   if (!r || typeof r !== "object") return {};
   const bc = r.barcode == null ? "" : String(r.barcode).replace(/\D/g, "");
+  // An unreadable value comes back as null: keep it null (Number(null) would turn it into 0).
+  const opt = (v, max) => v == null || v === "" ? null : num(v, max);
   return { name: str(r.name), brand: str(r.brand, 100), barcode: /^\d{6,14}$/.test(bc) ? bc : null,
-    kcal: num(r.kcal, 1000), protein: num(r.protein, 100), fat: num(r.fat, 100), carbs: num(r.carbs, 100), serving: num(r.serving, 5000) };
+    kcal: opt(r.kcal, 1000), protein: opt(r.protein, 100), fat: opt(r.fat, 100), carbs: opt(r.carbs, 100), serving: opt(r.serving, 5000) || null };
 }

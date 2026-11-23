@@ -1,5 +1,6 @@
 import { DEFAULT_GOALS, genericFoods, mealLabel } from "./data/foods.js";
 import { I18N, setLang, tText } from "./i18n.js";
+import { findMatches } from "./data/match.js";
 import { Data, IDB, sanitizeAIItem, watchDay } from "./data/store.js";
 import { AI, ITEMS_SCHEMA, readLabel, saveAISettings } from "./services/ai.js";
 import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
@@ -134,6 +135,7 @@ export function bindEvents() {
         for (const k of ["name", "brand", "kcal", "protein", "fat", "carbs", "serving"]) if (r[k] != null && r[k] !== "") merged[k] = r[k];
         if (!merged.barcode && r.barcode) merged.barcode = r.barcode;
         ui.sheet.food = merged; ui.sheet.busy = false;
+        if (!ui.sheet.id) ui.sheet.matches = findMatches(merged, S.foods);
         const missing = ["kcal", "protein", "fat", "carbs"].filter(k => merged[k] == null);
         ui.sheet.status = missing.length ? tText("food.labelPartial", { missing: missing.map(k => k === "kcal" ? tText("unit.kcal") : tText("macro." + k + "Short")).join(", ") }) : tText("food.labelDone");
         ui.sheet.err = !!missing.length; renderSheet();
@@ -211,6 +213,12 @@ export function bindEvents() {
       case "labelPhoto": if (!AI.ready()) return setStatus(tText("ai.needKeyLabel"), true); pickPhoto("label"); break;
       case "labelIntoForm": ui.sheet.food = readFoodForm(); if (!AI.ready()) return setStatus(tText("ai.needKeyLabel"), true); pickPhoto("labelForm"); break;
       case "newFood": openSheet({ step: "food", meal: ui.sheet?.meal || null, food: { name: ui.sheet?.q || "" }, q0: ui.sheet?.q, recent0: ui.sheet?.recent }); break;
+      case "useMatch": {
+        const f = S.foods.find(x => x.id === b.dataset.id); if (!f) return;
+        if (ui.sheet.meal) openSheet({ step: "amount", meal: ui.sheet.meal, food: { ...f, source: "mine" }, grams: f.serving || 100, unit: f.serving ? "srv" : "g" });
+        else openSheet({ step: "food", id: f.id, food: { ...f } });   // opened from My foods: show the saved product
+        break;
+      }
       case "editFood": { const f = S.foods.find(x => x.id === b.dataset.id); if (f) openSheet({ step: "food", id: f.id, food: { ...f } }); break; }
       case "askDelFood": ui.sheet.food = readFoodForm(); ui.sheet.confirmDel = true; renderSheet(); break;
       case "delFood": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteFood(id), tText("food.deleted")); break; }
@@ -266,7 +274,7 @@ export function bindEvents() {
     if (ev.target.id === "foodForm") {
       const f = readFoodForm();
       if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { ui.sheet.food = f; return setStatus(tText("food.fillAll"), true); }
-      if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; return setStatus(tText("food.duplicateBarcode"), true); }
+      if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; ui.sheet.matches = findMatches(f, S.foods); return setStatus(tText("food.duplicateBarcode"), true); }
       const meal = ui.sheet.meal, id = ui.sheet.id;
       try {
         if (id) { await Data.updateFood(id, f); closeSheet(); toast(tText("food.saved")); return; }

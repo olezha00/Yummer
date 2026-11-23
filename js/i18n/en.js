@@ -187,6 +187,8 @@ export const en = {
   "food.duplicateBarcode": "A food with this barcode is already in My foods.",
   "food.labelPartial": "Filled in what could be read. Add: {missing}.",
   "food.labelDone": "Filled in from the label. Check the numbers and save.",
+  "food.matchesTitle": "This product looks like one already in My foods. Tap it to avoid a duplicate:",
+  "food.matchesOther": "A different product? Check the fields below and save.",
   "food.labelFailed": "Couldn't read the label.",
 
   "scan.hint": "Point the camera at the barcode",

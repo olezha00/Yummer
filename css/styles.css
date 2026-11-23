@@ -149,3 +149,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .toast:empty { display: none; }
 .toast.err { background: var(--warn); color: #fff; }
 .toast-act { border: 0; background: none; color: inherit; font-weight: 700; padding: 4px 2px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Possible duplicates shown in the food form */
+.matches { background: var(--accent-soft); border-radius: var(--r); padding: 10px; }

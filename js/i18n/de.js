@@ -187,6 +187,8 @@ export const de = {
   "food.duplicateBarcode": "Ein Lebensmittel mit diesem Barcode gibt es schon in „Meine Lebensmittel“.",
   "food.labelPartial": "Ausgefüllt, was lesbar war. Ergänze: {missing}.",
   "food.labelDone": "Aus dem Etikett ausgefüllt. Prüfe die Zahlen und speichere.",
+  "food.matchesTitle": "Dieses Produkt sieht aus wie eines, das schon in „Meine Lebensmittel“ ist. Tippe es an, um kein Duplikat anzulegen:",
+  "food.matchesOther": "Ein anderes Produkt? Prüfe die Felder unten und speichere.",
   "food.labelFailed": "Das Etikett konnte nicht gelesen werden.",
 
   "scan.hint": "Richte die Kamera auf den Barcode",

@@ -187,6 +187,8 @@ export const pl = {
   "food.duplicateBarcode": "Produkt z tym kodem kreskowym jest już w Moich produktach.",
   "food.labelPartial": "Uzupełniono to, co udało się odczytać. Dodaj: {missing}.",
   "food.labelDone": "Uzupełniono z etykiety. Sprawdź liczby i zapisz.",
+  "food.matchesTitle": "Ten produkt wygląda na zapisany już w Moich produktach. Wybierz go, aby nie tworzyć duplikatu:",
+  "food.matchesOther": "To inny produkt? Sprawdź pola poniżej i zapisz.",
   "food.labelFailed": "Nie udało się odczytać etykiety.",
 
   "scan.hint": "Skieruj aparat na kod kreskowy",
