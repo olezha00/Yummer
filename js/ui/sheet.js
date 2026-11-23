@@ -78,7 +78,7 @@ export function sheetAmount(s) {
       ${isEdit ? `<button class="btn danger block" data-act="${s.confirmDel ? "delEntry" : "askDel"}">${s.confirmDel ? t("common.confirmDelete") : t("amount.delete")}</button>` : `<button class="btn block" data-act="back">${t("common.back")}</button>`}
     </div>`;
 }
-export const previewHTML = m => `<div><b>${Math.round(m.kcal)}</b><span>${t("unit.kcal")}</span></div><div><b style="color:var(--protein)">${fm(m.protein)}</b><span>${t("macro.proteinShort")}</span></div><div><b style="color:var(--fat)">${fm(m.fat)}</b><span>${t("macro.fatShort")}</span></div><div><b style="color:var(--carbs)">${fm(m.carbs)}</b><span>${t("macro.carbsShort")}</span></div>`;
+export const previewHTML = m => `<div><b>${Math.round(m.kcal)}</b><span>${t("unit.kcal")}</span></div><div><b style="color:var(--protein-ink)">${fm(m.protein)}</b><span>${t("macro.proteinShort")}</span></div><div><b style="color:var(--fat-ink)">${fm(m.fat)}</b><span>${t("macro.fatShort")}</span></div><div><b style="color:var(--carbs-ink)">${fm(m.carbs)}</b><span>${t("macro.carbsShort")}</span></div>`;
 const closeBtn = () => `<button data-act="close" aria-label="${t("common.close")}">✕</button>`;
 
 export function sheetAI(s) {
