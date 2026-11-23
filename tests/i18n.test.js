@@ -54,3 +54,11 @@ test("built-in foods are found by any of their four names", () => {
   const quark = genericFoods().find(f => f.name === "Quark, half-fat");
   for (const w of ["twarog", "творог", "quark"]) assert.ok(quark.search.includes(w), w);
 });
+test("macro badge letters are one distinct letter each, Б/Ж/У in Russian", () => {
+  for (const [lang, d] of Object.entries(DICTS)) {
+    const letters = ["protein", "fat", "carbs"].map(k => d[`macro.${k}Letter`]);
+    for (const l of letters) assert.equal([...l].length, 1, `${lang}: ${l}`);
+    assert.equal(new Set(letters).size, 3, lang);
+  }
+  assert.deepEqual(["protein", "fat", "carbs"].map(k => DICTS.ru[`macro.${k}Letter`]), ["Б", "Ж", "У"]);
+});

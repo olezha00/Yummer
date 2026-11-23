@@ -11,6 +11,9 @@ export const en = {
   "macro.proteinShort": "protein",
   "macro.fatShort": "fat",
   "macro.carbsShort": "carbs",
+  "macro.proteinLetter": "P",
+  "macro.fatLetter": "F",
+  "macro.carbsLetter": "C",
 
   "meal.breakfast": "Breakfast",
   "meal.lunch": "Lunch",
