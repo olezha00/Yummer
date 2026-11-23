@@ -78,7 +78,7 @@ export async function shrink(file, max = 1600) {
   } catch { return file; }
 }
 
-export const LABEL_PROMPT = `Read this photo of a food product (nutrition table and/or front of the pack, possibly in Polish).
+export const LABEL_PROMPT = `Read these photos (one or more) of the same food product: the nutrition table and/or the front of the pack, possibly in Polish.
 Return JSON only, no prose, in exactly this shape:
 {"name": string|null, "brand": string|null, "barcode": string|null, "kcal": number|null, "protein": number|null, "fat": number|null, "carbs": number|null, "serving": number|null}
 Rules: nutrition values are per 100 g or 100 ml (in Polish "w 100 g"). If only kJ is shown, divide by 4.184. "carbs" is total carbohydrates (węglowodany), not sugars.
@@ -89,9 +89,12 @@ export const LABEL_SCHEMA = { type: "object", additionalProperties: false, requi
   properties: { name: STR, brand: STR, barcode: STR, kcal: NUM, protein: NUM, fat: NUM, carbs: NUM, serving: NUM } };
 export const ITEMS_SCHEMA = { type: "object", additionalProperties: false, required: ["items"], properties: { items: { type: "array", items: { type: "object", additionalProperties: false,
   required: ["name", "grams", "kcal", "protein", "fat", "carbs"], properties: { name: { type: "string" }, grams: { type: "number" }, kcal: { type: "number" }, protein: { type: "number" }, fat: { type: "number" }, carbs: { type: "number" } } } } } };
-export async function readLabel(file) {
-  const img = await shrink(file);
-  const out = await AI.json(LABEL_PROMPT, LABEL_SCHEMA, [img]);
+/** Up to this many photos go to the AI at once (front of the pack plus the nutrition table). */
+export const MAX_LABEL_PHOTOS = 3;
+export async function readLabel(files) {
+  const list = (Array.isArray(files) ? files : [files]).slice(0, MAX_LABEL_PHOTOS);
+  const imgs = []; for (const f of list) imgs.push(await shrink(f));
+  const out = await AI.json(LABEL_PROMPT, LABEL_SCHEMA, imgs);
   if (!out || typeof out !== "object") throw new Error(tText("ai.err.label"));
   return sanitizeLabel(out);
 }
