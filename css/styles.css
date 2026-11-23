@@ -110,6 +110,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .btn.danger { background: none; color: var(--warn); }
 .btn.block { width: 100%; }
 .btn:disabled { opacity: .55; cursor: default; }
+.btn.withicon { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn.withicon svg, .btn.iconbtn svg { width: 20px; height: 20px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.btn.iconbtn { padding: 0 10px; display: grid; place-items: center; }
+.inrow { display: flex; gap: 6px; }
+.inrow input { flex: 1; min-width: 0; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 /* Visually hidden text that screen readers still read. */
@@ -143,7 +148,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 /* Scanner */
 .scanner { position: fixed; inset: 0; z-index: 40; background: #000; display: flex; flex-direction: column; }
 .scanner video { flex: 1; width: 100%; height: 100%; object-fit: cover; min-height: 0; }
-.scanner .frame { position: absolute; left: 10%; right: 10%; top: 38%; height: 22%; border: 3px solid rgb(255 255 255 / .9); border-radius: 16px; box-shadow: 0 0 0 9999px rgb(0 0 0 / .35); pointer-events: none; }
+.scanner .frame { position: absolute; left: 10%; right: 10%; top: 30%; height: 34%; border: 3px solid rgb(255 255 255 / .9); border-radius: 16px; box-shadow: 0 0 0 9999px rgb(0 0 0 / .35); pointer-events: none; }
 .scanner .bar { position: absolute; left: 0; right: 0; bottom: 0; padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 10px; background: linear-gradient(transparent, rgb(0 0 0 / .7)); }
 .scanner .hint { color: #fff; text-align: center; font-size: 14px; }
 .scanner .btn { background: rgb(255 255 255 / .92); color: #111; }
