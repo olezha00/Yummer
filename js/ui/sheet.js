@@ -106,6 +106,7 @@ export function sheetFood(s) {
     <form class="stack" id="foodForm">
       <button type="button" class="btn" data-act="labelIntoForm">${s.busy ? t("food.reading") : t("food.fromLabel")}</button>
       <div class="status ${s.err ? "err" : ""}">${esc(s.status || "")}</div>
+      ${!s.id && s.matches?.length ? matchesBlock(s.matches) : ""}
       <div class="field"><label for="f-name">${t("food.name")}</label><input id="f-name" type="text" required value="${v("name")}" placeholder="${t("food.namePlaceholder")}"></div>
       <div class="grid2">
         <div class="field"><label for="f-brand">${t("food.brand")}</label><input id="f-brand" type="text" value="${v("brand")}"></div>
@@ -123,6 +124,14 @@ export function sheetFood(s) {
       ${s.id ? `<button type="button" class="btn danger" data-act="${s.confirmDel ? "delFood" : "askDelFood"}">${s.confirmDel ? t("common.confirmDelete") : t("food.delete")}</button>` : ""}
       ${s.meal ? `<button type="button" class="btn" data-act="back">${t("common.back")}</button>` : ""}
     </form>`;
+}
+
+/** Saved products that look like the one being added: tap one to use it instead of creating a duplicate. */
+function matchesBlock(list) {
+  return `<div class="matches stack"><p class="small" style="margin:0"><b>${t("food.matchesTitle")}</b></p>
+    <div class="list">${list.map(f => `<button type="button" class="item" data-act="useMatch" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</div>
+      <div class="sub num">${f.barcode ? esc(f.barcode) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`).join("")}</div>
+    <p class="small muted" style="margin:0">${t("food.matchesOther")}</p></div>`;
 }
 
 export function readFoodForm() {

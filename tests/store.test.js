@@ -48,3 +48,10 @@ test("label values are range-checked per 100 g", () => {
   assert.equal(r.kcal, 64);
   assert.deepEqual(sanitizeLabel("nope"), {});
 });
+test("unreadable label values stay empty instead of becoming 0", () => {
+  const r = sanitizeLabel({ name: "X", brand: null, barcode: null, kcal: null, protein: 5, fat: "", carbs: 0, serving: null });
+  assert.equal(r.kcal, null);
+  assert.equal(r.fat, null);
+  assert.equal(r.carbs, 0);
+  assert.equal(r.serving, null);
+});
