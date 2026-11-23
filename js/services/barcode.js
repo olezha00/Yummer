@@ -75,19 +75,25 @@ function zxDecode(canvas, global) {
 }
 
 /* ---------- Barcode decoding from a photo ---------- */
+/** Photo decoding stops after this long, so the AI fallback can start without a long wait. */
+export const PHOTO_BUDGET_MS = 2500;
 export async function decodeBarcode(file) {
   let bmp;
   try { bmp = await createImageBitmap(file); } catch { return null; }
-  const det = await nativeDetector();
-  if (det) { try { const codes = await det.detect(bmp); if (codes.length) return codes[0].rawValue; } catch {} }
-  const canvas = document.createElement("canvas");
-  for (const max of [1600, 900]) for (const deg of PHOTO_ANGLES) for (const global of [false, true]) {
-    drawTurned(canvas, bmp, bmp.width, bmp.height, deg, max);
-    const text = zxDecode(canvas, global);
-    if (text) return text;
-    await new Promise(r => setTimeout(r)); // keep the page responsive between attempts
-  }
-  return null;
+  try {
+    const det = await nativeDetector();
+    if (det) { try { const codes = await det.detect(bmp); if (codes.length) return codes[0].rawValue; } catch {} }
+    const canvas = document.createElement("canvas"), end = Date.now() + PHOTO_BUDGET_MS;
+    // Most likely first: the usual size and angles with the hybrid binarizer, then the rest while time remains.
+    for (const global of [false, true]) for (const max of [1600, 900]) for (const deg of PHOTO_ANGLES) {
+      if (Date.now() > end) return null;
+      drawTurned(canvas, bmp, bmp.width, bmp.height, deg, max);
+      const text = zxDecode(canvas, global);
+      if (text) return text;
+      await new Promise(r => setTimeout(r)); // keep the page responsive between attempts
+    }
+    return null;
+  } finally { try { bmp.close(); } catch {} }
 }
 
 /* ---------- Live camera scanner ---------- */
