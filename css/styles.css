@@ -70,6 +70,10 @@ header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; b
 .item:last-child { border-bottom: 0; }
 .item .main { flex: 1; min-width: 0; }
 .item .name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A long name shortens with "…" so the tag after it stays visible. */
+.item .name:has(> .nm) { display: flex; align-items: baseline; min-width: 0; }
+.item .name > .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .name > .tag { flex: none; }
 .item .sub { font-size: 12px; color: var(--muted); }
 .item .kc { font-weight: 600; font-size: 14px; white-space: nowrap; }
 .dots { display: inline-flex; gap: 8px; }

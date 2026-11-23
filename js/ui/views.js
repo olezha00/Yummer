@@ -40,7 +40,7 @@ export function viewDiary() {
     const mt = totals(items);
     h += `<section class="meal"><div class="mhead"><h2>${label}</h2><span class="mk num">${items.length ? Math.round(mt.kcal) + " " + t("unit.kcal") : ""}</span></div><div class="list">`;
     for (const e of items) h += `<div class="swipe"><button class="swipe-del" data-act="swipeDel" data-id="${esc(e.id)}" aria-label="${t("diary.deleteEntry", { name: e.name })}">${TRASH}</button>
-      <button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}${own.has(e.foodId) ? ownTag() : ""}</div>
+      <button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name"><span class="nm">${esc(e.name)}</span>${own.has(e.foodId) ? ownTag() : ""}</div>
       <div class="sub num">${fm(e.grams)} ${t("unit.g")} · ${dots(e)}</div></div><div class="kc num">${Math.round(e.kcal)}</div></button></div>`;
     h += `<button class="addrow" data-act="add" data-meal="${key}">${t("diary.addFood")}</button></div></section>`;
   }
@@ -53,7 +53,7 @@ export function viewFoods() {
   h += `<button class="btn primary block" data-act="newFood" style="margin-bottom:12px">${t("foods.create")}</button>`;
   if (!foods.length) return h + `<div class="card empty">${t("foods.empty")}</div>`;
   h += `<div class="list">`;
-  for (const f of foods) h += `<button class="item" data-act="editFood" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}${isOwnFood(f) ? ownTag() : ""}</div>
+  for (const f of foods) h += `<button class="item" data-act="editFood" data-id="${esc(f.id)}"><div class="main"><div class="name"><span class="nm">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</span>${isOwnFood(f) ? ownTag() : ""}</div>
     <div class="sub num">${f.barcode ? "▮▯▮ " + esc(f.barcode) + " · " : ""}${dots(f)}</div></div><div class="kc num">${Math.round(f.kcal)}<span class="muted small"> ${t("unit.kcal")}</span></div></button>`;
   return h + `</div>`;
 }
