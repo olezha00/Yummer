@@ -2,7 +2,7 @@ import { DEFAULT_GOALS, genericFoods, mealLabel } from "./data/foods.js";
 import { I18N, setLang, tText } from "./i18n.js";
 import { findMatches } from "./data/match.js";
 import { Data, IDB, sanitizeAIItem, watchDay } from "./data/store.js";
-import { AI, ITEMS_SCHEMA, readLabel, saveAISettings } from "./services/ai.js";
+import { AI, ITEMS_SCHEMA, estimateFood, readLabel, saveAISettings } from "./services/ai.js";
 import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
 import { offByBarcode, offComplete, offErrorText, offSearchLive } from "./services/off.js";
 import { S, ui } from "./state.js";
@@ -46,6 +46,24 @@ export async function runOffSearch() {
   try { const r = await offSearchLive(q); if (!ui.sheet || ui.sheet.step !== "search") return; ui.sheet.offResults = r.items; ui.sheet.offQuery = r.query; ui.sheet.offFor = q; }
   catch (e) { if (!ui.sheet) return; ui.sheet.offErr = offErrorText(e); }
   ui.sheet.offBusy = false; renderSheet();
+}
+
+/** No database has the product: ask the AI for typical values and open the food form so the person can check and save them. */
+export async function runAIEstimate() {
+  if (!ui.sheet || ui.sheet.step !== "search") return;
+  const q = (ui.sheet.q || "").trim(); if (!q) return;
+  if (!AI.ready()) return setStatus(tText("ai.needKeyEstimate"), true);
+  ui.sheet.aiBusy = true; ui.sheet.offErr = ""; renderSheet();
+  try {
+    const f = await estimateFood(q);
+    if (!ui.sheet || ui.sheet.step !== "search") return;
+    if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].every(v => v == null)) { ui.sheet.aiBusy = false; return setStatus(tText("off.aiUnclear"), true); }
+    openSheet({ step: "food", meal: ui.sheet.meal, food: f, q0: ui.sheet.q, recent0: ui.sheet.recent, matches: findMatches(f, S.foods),
+      status: tText("off.aiEstimated", { provider: AI.label() }) });
+  } catch (e) {
+    if (!ui.sheet || ui.sheet.step !== "search") return;
+    ui.sheet.aiBusy = false; setStatus(e?.message || tText("off.aiFailed"), true);
+  }
 }
 
 
@@ -193,6 +211,7 @@ export function bindEvents() {
       case "delEntry": { const id = ui.sheet.id; closeSheet(); await safe(Data.deleteEntry(id), tText("amount.deleted")); break; }
       case "toAI": if (!AI.ready()) return setStatus(tText("ai.needKeyDescribe"), true); openSheet({ step: "ai", meal: ui.sheet.meal, text: ui.sheet.q || "", q0: ui.sheet.q, recent0: ui.sheet.recent }); break;
       case "runAI": runAI(); break;
+      case "aiEstimate": runAIEstimate(); break;
       case "aiDrop": ui.sheet.text = $("#aitext").value; ui.sheet.items.splice(+b.dataset.i, 1); renderSheet(); break;
       case "aiAdd": {
         const meal = ui.sheet.meal, items = ui.sheet.items; closeSheet();

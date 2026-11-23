@@ -143,6 +143,14 @@ export function readFoodForm() {
 
 export function setStatus(msg, err) { if (!ui.sheet) return; ui.sheet.status = msg; ui.sheet.err = !!err; renderSheet(); }
 
+/** After a search: let the AI estimate the product by name, or read its label, when the right product is missing. */
+function aiFallback(s) {
+  if (!AI.ready()) return `<p class="small muted" style="margin:0">${t("off.aiNeedKey")}</p>`;
+  return `<p class="small muted" style="margin:0">${s.offResults?.length ? t("off.notHere") : t("off.tryAI")}</p>
+    <div class="grid2"><button class="btn" data-act="aiEstimate" ${s.aiBusy ? "disabled" : ""}>${s.aiBusy ? t("off.aiEstimating", { provider: AI.label() }) : t("off.aiEstimate")}</button>
+    <button class="btn" data-act="labelPhoto">${t("search.labelPhoto")}</button></div>`;
+}
+
 export function offBlock(s, row) {
   if (!navigator.onLine) return `<p class="small muted" style="margin-top:14px">${t("off.offline")}</p>`;
   const q = (s.q || "").trim();
@@ -150,6 +158,7 @@ export function offBlock(s, row) {
   if (q && !/^\d{8,14}$/.test(q)) h += `<button class="btn block" data-act="offSearch" ${s.offBusy ? "disabled" : ""}>${s.offBusy ? t("off.searching") : t("off.searchFor", { q }) + (I18N.lang !== "pl" && AI.ready() ? t("off.inPolish") : "")}</button>`;
   if (s.offErr) h += `<div class="status err">${esc(s.offErr)}</div>`;
   if (s.offResults && s.offFor === q) h += s.offResults.length ? `<p class="small muted" style="margin:0">Open Food Facts${s.offQuery && s.offQuery !== q ? t("off.resultsPolish", { q: s.offQuery }) : ""}</p><div class="results">${s.offResults.map(row).join("")}</div>` : `<p class="small muted" style="margin:0">${t("off.noResults")}</p>`;
+  if ((s.offResults && s.offFor === q) || s.offErr) h += aiFallback(s);
   h += `<p class="small muted" style="margin:0">${offCredit()}</p></div>`;
   return h;
 }

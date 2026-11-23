@@ -39,17 +39,63 @@ export async function offByBarcode(code) {
   const j = await browserJSON("https://world.openfoodfacts.org/api/v2/product/" + encodeURIComponent(code) + ".json?fields=" + OFF_FIELDS);
   return j && j.status === 1 ? offToFood({ ...j.product, code }, I18N.lang) : null;
 }
+/* ---------- Product search ----------
+   Search-a-licious (search.openfoodfacts.org) takes a Lucene-style query. Two searches run at once:
+   products sold in Poland, and products sold elsewhere in the EU / UK. Polish hits come first.
+   The query holds both the person's words (brands keep working) and, when AI is set up, a Polish translation. */
+export const HOME_COUNTRIES = ["poland"];
+export const EU_COUNTRIES = ["european-union", "germany", "czech-republic", "slovakia", "lithuania", "latvia", "estonia", "austria", "hungary",
+  "romania", "bulgaria", "croatia", "slovenia", "france", "belgium", "netherlands", "luxembourg", "italy", "spain", "portugal", "ireland",
+  "denmark", "sweden", "finland", "greece", "united-kingdom"];
+/** Strips characters with a meaning in the query language, so a typed quote or colon can't break the search. */
+export function cleanQuery(q) {
+  return String(q || "").replace(/[\\+\-!(){}[\]^"~*?:/&|<>=]/g, " ").replace(/\b(AND|OR|NOT|TO)\b/g, m => m.toLowerCase())
+    .replace(/\s+/g, " ").trim().slice(0, 80);
+}
+/** Full query: any of the texts, limited to products sold in one of the countries. */
+export function offQuery(texts, countries) {
+  const terms = [...new Set(texts.map(cleanQuery).filter(Boolean))];
+  if (!terms.length) return "";
+  const text = terms.length > 1 ? terms.map(x => "(" + x + ")").join(" OR ") : terms[0];
+  return "(" + text + ") AND (" + countries.map(c => 'countries_tags:"en:' + c + '"').join(" OR ") + ")";
+}
+/** Languages whose product names are searched: Polish first, then the UI language, English and German. */
+export const offLangs = lang => [...new Set(["pl", lang, "en", "de"])].join(",");
+/** Joins result lists in order, without repeating a product. */
+export function mergeFoods(lists, max = 30) {
+  const seen = new Set(), out = [];
+  for (const list of lists) for (const f of list) if (f && !seen.has(f.id) && out.length < max) { seen.add(f.id); out.push(f); }
+  return out;
+}
+export const searchURL = (query, lang) => "https://search.openfoodfacts.org/search?q=" + encodeURIComponent(query) + "&page_size=25&langs=" + offLangs(lang) + "&fields=" + OFF_FIELDS;
+/** The older search on world.openfoodfacts.org: used only when the search service is down. */
+export const legacySearchURL = q => "https://world.openfoodfacts.org/cgi/search.pl?search_terms=" + encodeURIComponent(cleanQuery(q)) +
+  "&tagtype_0=countries&tag_contains_0=contains&tag_0=poland&search_simple=1&action=process&json=1&page_size=25&fields=" + OFF_FIELDS;
+
 /* Translations of search queries to Polish, kept for this session so a repeated search costs no AI call. */
 const toPolish = new Map();
 function remember(q, pl) { if (toPolish.size >= 50) toPolish.delete(toPolish.keys().next().value); toPolish.set(q, pl); }
-export async function offSearchLive(q) {
-  let query = q;
+async function polishQuery(q) {
   const cached = toPolish.get(q);
-  if (cached) query = cached;
-  else if (I18N.lang !== "pl" && /\p{L}/u.test(q) && !/[ąćęłńóśźż]/i.test(q) && AI.ready()) {
-    try { const pl = await AI.text("Translate this food search query into Polish as it would appear on a product label in a Polish shop. Reply with the Polish words only, nothing else: " + q); if (pl) { query = pl.trim().replace(/^["«„“]|["»”]$/g, "").slice(0, 80); remember(q, query); } } catch {}
+  if (cached) return cached;
+  if (I18N.lang === "pl" || !/\p{L}/u.test(q) || /[ąćęłńóśźż]/i.test(q) || !AI.ready()) return q;
+  try {
+    const pl = await AI.text("Translate this food search query into Polish as it would appear on a product label in a Polish shop. Keep brand names unchanged. Reply with the Polish words only, nothing else: " + q);
+    if (pl) { const out = pl.trim().replace(/^["«„“]|["»”]$/g, "").slice(0, 80); remember(q, out); return out; }
+  } catch {}
+  return q;
+}
+export async function offSearchLive(q) {
+  const query = await polishQuery(q);
+  const texts = query !== q ? [query, q] : [q];
+  const lang = I18N.lang;
+  const hits = countries => browserJSON(searchURL(offQuery(texts, countries), lang)).then(j => (j && j.hits) || []);
+  const res = await Promise.allSettled([hits(HOME_COUNTRIES), hits(EU_COUNTRIES)]);
+  let lists = res.filter(r => r.status === "fulfilled").map(r => r.value);
+  if (!lists.length) {
+    try { const j = await browserJSON(legacySearchURL(query)); lists = [(j && j.products) || []]; }
+    catch { throw res[0].reason; }
   }
-  const url = "https://search.openfoodfacts.org/search?q=" + encodeURIComponent(query + ' countries_tags:"en:poland"') + "&page_size=25&langs=pl,en&fields=" + OFF_FIELDS;
-  const j = await browserJSON(url);
-  return { query, items: ((j && j.hits) || []).map(x => offToFood(x, I18N.lang)).filter(offComplete) };
+  const items = mergeFoods(lists.map(l => l.map(x => offToFood(x, lang)).filter(offComplete)));
+  return { query, items };
 }
