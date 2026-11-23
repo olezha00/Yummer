@@ -111,6 +111,11 @@ export function genericFoods() {
 export const GENERIC_COUNT = ROWS.length;
 export const GENERIC_ROWS = ROWS;
 
+/** Products the user made themselves (typed in or read from a label photo), not saved from Open Food Facts. */
+export const isOwnFood = f => !!f && (f.source === "custom" || f.source === "mine");
+/** Ids of the user's own products, to mark diary entries that came from them. */
+export const ownFoodIds = foods => new Set(foods.filter(isOwnFood).map(f => f.id));
+
 export const MEAL_KEYS = ["breakfast", "lunch", "dinner", "snacks"];
 /** [[key, label]] in the current language. */
 export const meals = () => MEAL_KEYS.map(k => [k, tText("meal." + k)]);

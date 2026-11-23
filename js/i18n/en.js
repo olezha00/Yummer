@@ -121,6 +121,7 @@ export const en = {
   "search.describe": "Describe in words",
   "search.tagGeneric": "basic",
   "search.tagRecent": "recent",
+  "search.tagOwn": "own",
   "search.per100": "{kcal} kcal / 100 g",
   "search.nothing": "Nothing found for “{q}”. Try “Describe in words” or",
   "search.createFood": "create a food",

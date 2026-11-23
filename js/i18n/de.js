@@ -121,6 +121,7 @@ export const de = {
   "search.describe": "Mit Worten beschreiben",
   "search.tagGeneric": "Basis",
   "search.tagRecent": "zuletzt",
+  "search.tagOwn": "eigenes",
   "search.per100": "{kcal} kcal / 100 g",
   "search.nothing": "Keine Treffer für „{q}“. Versuche „Mit Worten beschreiben“ oder",
   "search.createFood": "erstelle ein Lebensmittel",

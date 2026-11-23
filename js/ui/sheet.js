@@ -1,8 +1,8 @@
-import { GENERIC_COUNT, genericFoods, mealLabel, meals } from "../data/foods.js";
+import { GENERIC_COUNT, genericFoods, isOwnFood, mealLabel, meals, ownFoodIds } from "../data/foods.js";
 import { I18N, t } from "../i18n.js";
 import { AI } from "../services/ai.js";
 import { S, ui } from "../state.js";
-import { dots, offCredit, totals } from "./views.js";
+import { dots, offCredit, ownTag, totals } from "./views.js";
 import { $, esc, fm, norm, r1, scale } from "../util.js";
 
 /* ---------- Sheet (add / edit flows) ---------- */
@@ -33,7 +33,7 @@ export function renderSheet() {
 
 export function sheetSearch(s) {
   const q = norm(s.q);
-  const mine = S.foods.map(f => ({ ...f, source: "mine" }));
+  const mine = S.foods.map(f => ({ ...f, source: "mine", own: isOwnFood(f) }));
   let results;
   if (q) {
     const words = q.split(/\s+/).filter(Boolean);
@@ -46,11 +46,11 @@ export function sheetSearch(s) {
     <button class="tool" data-act="labelPhoto">${ICON.label}${t("search.labelPhoto")}</button>
     <button class="tool" data-act="toAI">${ICON.ai}${t("search.describe")}</button></div>`;
   let list = "";
-  const row = f => `<button class="item" data-act="pick" data-src="${esc(f.source)}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.source === "generic" ? `<span class="tag">${t("search.tagGeneric")}</span>` : f.source === "recent" ? `<span class="tag">${t("search.tagRecent")}</span>` : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
+  const row = f => `<button class="item" data-act="pick" data-src="${esc(f.source)}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.own ? ownTag() : f.source === "generic" ? `<span class="tag">${t("search.tagGeneric")}</span>` : f.source === "recent" ? `<span class="tag">${t("search.tagRecent")}</span>` : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
     <div class="sub num">${f.brand ? esc(f.brand) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`;
   if (results) list = results.length ? `<div class="results">${results.map(row).join("")}</div>` :
     `<div class="empty">${t("search.nothing", { q: s.q })} <button class="btn" data-act="newFood" style="padding:4px 10px">${t("search.createFood")}</button></div>`;
-  else if (s.recent?.length) list = `<p class="small muted" style="margin:4px 0">${t("search.recent")}</p><div class="results">${s.recent.map(e => row({ id: "r:" + e.name, name: e.name, ...e.per100, source: "recent" })).join("")}</div>`;
+  else if (s.recent?.length) { const own = ownFoodIds(S.foods); list = `<p class="small muted" style="margin:4px 0">${t("search.recent")}</p><div class="results">${s.recent.map(e => row({ id: "r:" + e.name, name: e.name, ...e.per100, source: "recent", own: own.has(e.foodId) })).join("")}</div>`; }
   else list = `<p class="small muted">${t("search.intro", { n: GENERIC_COUNT })}</p>`;
   return `<h3>${t("search.add", { meal: mealLabel(s.meal) })}${closeBtn()}</h3>
     <input type="search" id="q" placeholder="${t("search.placeholder")}" value="${esc(s.q || "")}" autocomplete="off" data-autofocus>
@@ -129,7 +129,7 @@ export function sheetFood(s) {
 /** Saved products that look like the one being added: tap one to use it instead of creating a duplicate. */
 function matchesBlock(list) {
   return `<div class="matches stack"><p class="small" style="margin:0"><b>${t("food.matchesTitle")}</b></p>
-    <div class="list">${list.map(f => `<button type="button" class="item" data-act="useMatch" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</div>
+    <div class="list">${list.map(f => `<button type="button" class="item" data-act="useMatch" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}${isOwnFood(f) ? ownTag() : ""}</div>
       <div class="sub num">${f.barcode ? esc(f.barcode) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`).join("")}</div>
     <p class="small muted" style="margin:0">${t("food.matchesOther")}</p></div>`;
 }

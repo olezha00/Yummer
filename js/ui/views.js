@@ -1,4 +1,4 @@
-import { DEFAULT_GOALS, meals } from "../data/foods.js";
+import { DEFAULT_GOALS, isOwnFood, meals, ownFoodIds } from "../data/foods.js";
 import { deviceLang, DICTS, I18N, LANGS, raw, t } from "../i18n.js";
 import { AI } from "../services/ai.js";
 import { APP_VERSION } from "../services/updates.js";
@@ -23,10 +23,12 @@ export function macroBar(label, key, tot, g, color) {
 }
 /** Trash can icon for the swipe Delete button; the button carries the accessible label. */
 const TRASH = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>`;
+/** Small «own» label for products the user made themselves. */
+export const ownTag = () => `<span class="tag">${t("search.tagOwn")}</span>`;
 export const dots = e => `<span class="dots num"><i class="p">${fm(e.protein)}</i><i class="f">${fm(e.fat)}</i><i class="c">${fm(e.carbs)}</i></span>`;
 
 export function viewDiary() {
-  const tot = totals(S.entries), g = S.goals;
+  const tot = totals(S.entries), g = S.goals, own = ownFoodIds(S.foods);
   let h = "";
   if (S.mode === "error") return `<div class="banner warn">${esc(S.error)}</div>`;
   if (!S.goalsSet && S.mode !== "loading") h += `<div class="banner">${t("diary.defaultGoals", { kcal: DEFAULT_GOALS.kcal })} <button class="btn" data-act="tab" data-tab="settings" style="padding:4px 10px;margin-left:4px">${t("diary.setGoals")}</button></div>`;
@@ -38,7 +40,7 @@ export function viewDiary() {
     const mt = totals(items);
     h += `<section class="meal"><div class="mhead"><h2>${label}</h2><span class="mk num">${items.length ? Math.round(mt.kcal) + " " + t("unit.kcal") : ""}</span></div><div class="list">`;
     for (const e of items) h += `<div class="swipe"><button class="swipe-del" data-act="swipeDel" data-id="${esc(e.id)}" aria-label="${t("diary.deleteEntry", { name: e.name })}">${TRASH}</button>
-      <button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}</div>
+      <button class="item" data-act="editEntry" data-id="${esc(e.id)}"><div class="main"><div class="name">${esc(e.name)}${own.has(e.foodId) ? ownTag() : ""}</div>
       <div class="sub num">${fm(e.grams)} ${t("unit.g")} · ${dots(e)}</div></div><div class="kc num">${Math.round(e.kcal)}</div></button></div>`;
     h += `<button class="addrow" data-act="add" data-meal="${key}">${t("diary.addFood")}</button></div></section>`;
   }
@@ -51,7 +53,7 @@ export function viewFoods() {
   h += `<button class="btn primary block" data-act="newFood" style="margin-bottom:12px">${t("foods.create")}</button>`;
   if (!foods.length) return h + `<div class="card empty">${t("foods.empty")}</div>`;
   h += `<div class="list">`;
-  for (const f of foods) h += `<button class="item" data-act="editFood" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</div>
+  for (const f of foods) h += `<button class="item" data-act="editFood" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}${isOwnFood(f) ? ownTag() : ""}</div>
     <div class="sub num">${f.barcode ? "▮▯▮ " + esc(f.barcode) + " · " : ""}${dots(f)}</div></div><div class="kc num">${Math.round(f.kcal)}<span class="muted small"> ${t("unit.kcal")}</span></div></button>`;
   return h + `</div>`;
 }

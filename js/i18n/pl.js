@@ -121,6 +121,7 @@ export const pl = {
   "search.describe": "Opisz słowami",
   "search.tagGeneric": "podstawowy",
   "search.tagRecent": "ostatnio",
+  "search.tagOwn": "własny",
   "search.per100": "{kcal} kcal / 100 g",
   "search.nothing": "Brak wyników dla „{q}”. Spróbuj „Opisz słowami” lub",
   "search.createFood": "utwórz produkt",
