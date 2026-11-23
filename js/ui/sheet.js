@@ -46,7 +46,7 @@ export function sheetSearch(s) {
     <button class="tool" data-act="labelPhoto">${ICON.label}${t("search.labelPhoto")}</button>
     <button class="tool" data-act="toAI">${ICON.ai}${t("search.describe")}</button></div>`;
   let list = "";
-  const row = f => `<button class="item" data-act="pick" data-src="${esc(f.source)}" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.own ? ownTag() : f.source === "generic" ? `<span class="tag">${t("search.tagGeneric")}</span>` : f.source === "recent" ? `<span class="tag">${t("search.tagRecent")}</span>` : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
+  const row = f => `<button class="item" data-act="pick" data-src="${esc(f.source)}" data-id="${esc(f.id)}"><div class="main"><div class="name"><span class="nm">${esc(f.name)}</span>${f.own ? ownTag() : f.source === "generic" ? `<span class="tag">${t("search.tagGeneric")}</span>` : f.source === "recent" ? `<span class="tag">${t("search.tagRecent")}</span>` : f.source === "off" ? '<span class="tag">OFF</span>' : ""}</div>
     <div class="sub num">${f.brand ? esc(f.brand) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`;
   if (results) list = results.length ? `<div class="results">${results.map(row).join("")}</div>` :
     `<div class="empty">${t("search.nothing", { q: s.q })} <button class="btn" data-act="newFood" style="padding:4px 10px">${t("search.createFood")}</button></div>`;
@@ -129,7 +129,7 @@ export function sheetFood(s) {
 /** Saved products that look like the one being added: tap one to use it instead of creating a duplicate. */
 function matchesBlock(list) {
   return `<div class="matches stack"><p class="small" style="margin:0"><b>${t("food.matchesTitle")}</b></p>
-    <div class="list">${list.map(f => `<button type="button" class="item" data-act="useMatch" data-id="${esc(f.id)}"><div class="main"><div class="name">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}${isOwnFood(f) ? ownTag() : ""}</div>
+    <div class="list">${list.map(f => `<button type="button" class="item" data-act="useMatch" data-id="${esc(f.id)}"><div class="main"><div class="name"><span class="nm">${esc(f.name)}${f.brand ? ` <span class="muted small">${esc(f.brand)}</span>` : ""}</span>${isOwnFood(f) ? ownTag() : ""}</div>
       <div class="sub num">${f.barcode ? esc(f.barcode) + " · " : ""}${t("search.per100", { kcal: Math.round(f.kcal) })} · ${dots(f)}</div></div></button>`).join("")}</div>
     <p class="small muted" style="margin:0">${t("food.matchesOther")}</p></div>`;
 }
