@@ -122,6 +122,7 @@ export const ru = {
   "search.describe": "Описать словами",
   "search.tagGeneric": "базовый",
   "search.tagRecent": "недавнее",
+  "search.tagOwn": "свой",
   "search.per100": "{kcal} ккал / 100 г",
   "search.nothing": "По запросу «{q}» ничего не найдено. Попробуйте «Описать словами» или",
   "search.createFood": "создайте продукт",
