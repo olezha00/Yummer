@@ -3,7 +3,7 @@ import { I18N, setLang, tText } from "./i18n.js";
 import { findMatches } from "./data/match.js";
 import { Data, IDB, sanitizeAIItem, watchDay } from "./data/store.js";
 import { AI, ITEMS_SCHEMA, estimateFood, readLabel, saveAISettings } from "./services/ai.js";
-import { decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
+import { checkDigitOk, decodeBarcode, startScanner, stopScanner } from "./services/barcode.js";
 import { offByBarcode, offComplete, offErrorText, offSearchLive } from "./services/off.js";
 import { S, ui } from "./state.js";
 import { bindSwipe, closeOpenRow } from "./ui/swipe.js";
@@ -13,7 +13,53 @@ import { $, r1, scale, shift, today } from "./util.js";
 
 /* ---------- Photos (barcode or label) ---------- */
 export let camPurpose = null;
-export function pickPhoto(purpose) { camPurpose = purpose; const inp = $("#camInput"); inp.value = ""; inp.click(); }
+export function pickPhoto(purpose) {
+  camPurpose = purpose; const inp = $("#camInput"); inp.value = "";
+  // A barcode needs one fresh shot; a label can be several photos (front and nutrition table), also from the library.
+  const label = purpose === "label" || purpose === "labelForm";
+  inp.multiple = label;
+  if (label) inp.removeAttribute("capture"); else inp.setAttribute("capture", "environment");
+  inp.click();
+}
+
+/** Where a scanned code goes: "search" looks the product up, "form" fills the barcode field of the product form. */
+let scanTarget = "search";
+export function openScanner(target) {
+  scanTarget = target; ui.sheet.status = "";
+  startScanner({ onCode: c => { if (ui.sheet) target === "form" ? codeIntoForm(c) : handleCode(c); },
+    onPhoto: () => pickPhoto(target === "form" ? "scanForm" : "scan"), onError: msg => setStatus(msg, true) });
+}
+
+/** Puts a scanned code into the product form, and fills still-empty fields from Open Food Facts when it knows the product. */
+export async function codeIntoForm(code) {
+  const digits = String(code).replace(/\s/g, "");
+  if (!ui.sheet || ui.sheet.step !== "food") return;
+  if (!/^\d{6,14}$/.test(digits)) return setStatus(tText("food.scanNotProduct"), true);
+  const f = { ...($("#foodForm") ? readFoodForm() : ui.sheet.food), barcode: digits };   // keep what was typed meanwhile
+  ui.sheet.food = f;
+  if (!ui.sheet.id) ui.sheet.matches = findMatches(f, S.foods);
+  setStatus(tText("food.barcodeScanned", { code: digits }));
+  const blank = v => v == null || v === "";
+  if (!navigator.onLine || !["name", "kcal", "protein", "fat", "carbs"].some(k => blank(f[k]))) return;
+  try {
+    const off = await offByBarcode(digits);
+    if (!off || !ui.sheet || ui.sheet.step !== "food") return;
+    const cur = readFoodForm();
+    if (cur.barcode !== digits) return;   // the person changed the code meanwhile
+    let filled = 0;
+    for (const k of ["name", "brand", "kcal", "protein", "fat", "carbs", "serving"]) if (blank(cur[k]) && !blank(off[k])) { cur[k] = off[k]; filled++; }
+    if (!filled) return;
+    ui.sheet.food = cur;
+    if (!ui.sheet.id) ui.sheet.matches = findMatches(cur, S.foods);
+    setStatus(tText("food.offFilled"));
+  } catch {}
+}
+
+/** The amount sheet for `food`; when coming back from editing its values, keeps the amount chosen before. */
+function amountSheet(food, meal, back) {
+  if (back) return { step: "amount", meal, food, grams: +back.grams || food.serving || 100, unit: back.unit === "srv" && food.serving ? "srv" : "g", q0: back.q0, recent0: back.recent0 };
+  return { step: "amount", meal, food, grams: food.serving || 100, unit: food.serving ? "srv" : "g" };
+}
 
 export function handleCode(code) {
   const digits = code.replace(/\s/g, "");
@@ -131,27 +177,28 @@ let lastDeleted = null;
 export function bindEvents() {
   bindSwipe();
   $("#camInput").addEventListener("change", async ev => {
-    const file = ev.target.files && ev.target.files[0];
+    const files = [...(ev.target.files || [])], file = files[0];
     if (!file || !ui.sheet) return;
     const purpose = camPurpose;
-    if (purpose === "scan") {
+    if (purpose === "scan" || purpose === "scanForm") {
       setStatus(tText("scan.decoding"));
       let code = await decodeBarcode(file);
       if (!code && AI.ready()) {
         setStatus(tText("scan.askAI", { provider: AI.label() }));
-        try { code = (await readLabel(file)).barcode; } catch {}
+        try { const c = (await readLabel(file)).barcode; if (c && checkDigitOk(c)) code = c; } catch {}
       }
+      if (!ui.sheet) return;
       if (!code) return setStatus(tText("scan.notFound"), true);
-      handleCode(code.trim());
+      if (purpose === "scanForm") codeIntoForm(code.trim()); else handleCode(code.trim());
     } else if (purpose === "label" || purpose === "labelForm") {
       if (ui.sheet.step !== "food") openSheet({ step: "food", meal: ui.sheet.meal, food: { barcode: ui.sheet.pendingCode || null }, busy: true, status: tText("food.reading") });
       else { ui.sheet.busy = true; ui.sheet.status = tText("food.reading"); ui.sheet.err = false; renderSheet(); }
       try {
         const cur = readFoodForm();
-        const r = await readLabel(file);
+        const r = await readLabel(files);
         const merged = { ...cur };
         for (const k of ["name", "brand", "kcal", "protein", "fat", "carbs", "serving"]) if (r[k] != null && r[k] !== "") merged[k] = r[k];
-        if (!merged.barcode && r.barcode) merged.barcode = r.barcode;
+        if (!merged.barcode && r.barcode && checkDigitOk(r.barcode)) merged.barcode = r.barcode;
         ui.sheet.food = merged; ui.sheet.busy = false;
         if (!ui.sheet.id) ui.sheet.matches = findMatches(merged, S.foods);
         const missing = ["kcal", "protein", "fat", "carbs"].filter(k => merged[k] == null);
@@ -170,7 +217,8 @@ export function bindEvents() {
       case "day": S.date = shift(S.date, +b.dataset.d); render(); watchDay(); break;
       case "close": closeSheet(); break;
       case "add": openSheet({ step: "search", meal: b.dataset.meal, q: "", recent: [] }); Data.recent().then(r => { if (ui.sheet && ui.sheet.step === "search") { ui.sheet.recent = r; renderSheet(); } }); break;
-      case "back": openSheet({ step: "search", meal: ($("#mealSel")?.value) || ui.sheet.meal, q: ui.sheet.q0 || "", recent: ui.sheet.recent0 || [] }); Data.recent().then(r => { if (ui.sheet && ui.sheet.step === "search") { ui.sheet.recent = r; renderSheet(); } }); break;
+      case "back": if (ui.sheet.backTo) { openSheet(ui.sheet.backTo); break; }
+        openSheet({ step: "search", meal: ($("#mealSel")?.value) || ui.sheet.meal, q: ui.sheet.q0 || "", recent: ui.sheet.recent0 || [] }); Data.recent().then(r => { if (ui.sheet && ui.sheet.step === "search") { ui.sheet.recent = r; renderSheet(); } }); break;
       case "pick": {
         const src = b.dataset.src, id = b.dataset.id;
         let f = src === "mine" ? S.foods.find(x => x.id === id) : src === "generic" ? genericFoods().find(x => x.id === id) : src === "off" ? (ui.sheet.offResults || []).find(x => x.id === id) : null;
@@ -219,9 +267,18 @@ export function bindEvents() {
           per100: { kcal: r1(i.kcal / i.grams * 100), protein: r1(i.protein / i.grams * 100), fat: r1(i.fat / i.grams * 100), carbs: r1(i.carbs / i.grams * 100), serving: null }, foodId: null, estimated: true }));
         await safe(Data.addEntries(list), tText("describe.added", { meal: mealLabel(meal), n: list.length })); break;
       }
-      case "scan": ui.sheet.status = ""; startScanner({ onCode: c => { if (ui.sheet) handleCode(c); }, onPhoto: () => pickPhoto("scan"), onError: msg => setStatus(msg, true) }); break;
+      case "scan": openScanner("search"); break;
+      case "scanIntoForm": ui.sheet.food = readFoodForm(); openScanner("form"); break;
       case "scanClose": stopScanner(); break;
-      case "scanPhoto": stopScanner(); pickPhoto("scan"); break;
+      case "scanPhoto": stopScanner(); pickPhoto(scanTarget === "form" ? "scanForm" : "scan"); break;
+      case "editValues": {
+        // A product found by barcode (saved, or from Open Food Facts): correct its values before adding it.
+        const s = ui.sheet, f = s.food, back = { ...s };
+        const saved = f.source === "mine" && f.id && S.foods.find(x => x.id === f.id);
+        if (saved) openSheet({ step: "food", id: saved.id, meal: s.meal, food: { ...saved }, backTo: back });
+        else { const { id, source, ...keep } = f; openSheet({ step: "food", meal: s.meal, food: keep, backTo: back, status: tText("food.editFoundHint") }); }
+        break;
+      }
       case "export": doExport(); break;
       case "import": $("#importInput").value = ""; $("#importInput").click(); break;
       case "testKey": testKey(); break;
@@ -294,11 +351,15 @@ export function bindEvents() {
       const f = readFoodForm();
       if (!f.name || [f.kcal, f.protein, f.fat, f.carbs].some(x => x == null)) { ui.sheet.food = f; return setStatus(tText("food.fillAll"), true); }
       if (f.barcode && !ui.sheet.id && S.foods.some(x => x.barcode === f.barcode)) { ui.sheet.food = f; ui.sheet.matches = findMatches(f, S.foods); return setStatus(tText("food.duplicateBarcode"), true); }
-      const meal = ui.sheet.meal, id = ui.sheet.id;
+      const meal = ui.sheet.meal, id = ui.sheet.id, back = ui.sheet.backTo;
       try {
-        if (id) { await Data.updateFood(id, f); closeSheet(); toast(tText("food.saved")); return; }
+        if (id) {
+          await Data.updateFood(id, f);
+          if (meal && back) { openSheet(amountSheet({ ...(S.foods.find(x => x.id === id) || f), id, source: "mine" }, meal, back)); toast(tText("food.saved")); return; }
+          closeSheet(); toast(tText("food.saved")); return;
+        }
         const newId = await Data.addFood({ ...f, source: "custom" });
-        if (meal) openSheet({ step: "amount", meal, food: { ...f, id: newId, source: "mine" }, grams: f.serving || 100, unit: f.serving ? "srv" : "g" });
+        if (meal) openSheet(amountSheet({ ...f, id: newId, source: "mine" }, meal, back));
         else { closeSheet(); toast(tText("food.saved")); }
       } catch (e) { setStatus(tText("common.saveFailed", { msg: e?.message || tText("common.tryAgain") }), true); }
     }

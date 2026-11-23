@@ -74,6 +74,7 @@ export function sheetAmount(s) {
       </div>
       <div class="preview num" id="pv">${previewHTML(m)}</div>
       <p class="small muted">${t("amount.per100", { kcal: Math.round(f.kcal), protein: fm(f.protein), fat: fm(f.fat), carbs: fm(f.carbs) })}</p>
+      ${!isEdit && (f.source === "mine" || f.source === "off") ? `<button class="btn block" data-act="editValues">${t("amount.editValues")}</button>` : ""}
       <button class="btn primary block" data-act="${isEdit ? "saveEntry" : "addEntry"}">${isEdit ? t("common.save") : t("amount.add")}</button>
       ${isEdit ? `<button class="btn danger block" data-act="${s.confirmDel ? "delEntry" : "askDel"}">${s.confirmDel ? t("common.confirmDelete") : t("amount.delete")}</button>` : `<button class="btn block" data-act="back">${t("common.back")}</button>`}
     </div>`;
@@ -102,15 +103,17 @@ export function sheetAI(s) {
 export function sheetFood(s) {
   const f = s.food || {};
   const v = k => f[k] == null ? "" : esc(f[k]);
-  return `<h3>${s.id ? t("food.edit") : t("food.new")}${closeBtn()}</h3>
+  return `<h3>${s.id || s.backTo ? t("food.edit") : t("food.new")}${closeBtn()}</h3>
     <form class="stack" id="foodForm">
-      <button type="button" class="btn" data-act="labelIntoForm">${s.busy ? t("food.reading") : t("food.fromLabel")}</button>
+      <button type="button" class="btn withicon" data-act="labelIntoForm" ${s.busy ? "disabled" : ""}>${ICON.label}<span>${s.busy ? t("food.reading") : t("food.fromLabel")}</span></button>
+      <p class="small muted" style="margin:0">${t("food.fromLabelHint")}</p>
       <div class="status ${s.err ? "err" : ""}">${esc(s.status || "")}</div>
       ${!s.id && s.matches?.length ? matchesBlock(s.matches) : ""}
       <div class="field"><label for="f-name">${t("food.name")}</label><input id="f-name" type="text" required value="${v("name")}" placeholder="${t("food.namePlaceholder")}"></div>
       <div class="grid2">
         <div class="field"><label for="f-brand">${t("food.brand")}</label><input id="f-brand" type="text" value="${v("brand")}"></div>
-        <div class="field"><label for="f-barcode">${t("food.barcode")}</label><input id="f-barcode" type="text" inputmode="numeric" value="${v("barcode")}"></div>
+        <div class="field"><label for="f-barcode">${t("food.barcode")}</label>
+          <div class="inrow"><input id="f-barcode" type="text" inputmode="numeric" value="${v("barcode")}"><button type="button" class="btn iconbtn" data-act="scanIntoForm" aria-label="${t("food.scanBarcode")}" title="${t("food.scanBarcode")}">${ICON.scan}</button></div></div>
       </div>
       <p class="small muted" style="margin:0">${t("food.per100")}</p>
       <div class="grid4">
