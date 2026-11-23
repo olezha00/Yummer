@@ -11,6 +11,9 @@ export const de = {
   "macro.proteinShort": "Eiweiß",
   "macro.fatShort": "Fett",
   "macro.carbsShort": "KH",
+  "macro.proteinLetter": "E",
+  "macro.fatLetter": "F",
+  "macro.carbsLetter": "K",
 
   "meal.breakfast": "Frühstück",
   "meal.lunch": "Mittagessen",

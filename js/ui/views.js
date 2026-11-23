@@ -25,7 +25,9 @@ export function macroBar(label, key, tot, g, color) {
 const TRASH = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>`;
 /** Small «own» label for products the user made themselves. */
 export const ownTag = () => `<span class="tag">${t("search.tagOwn")}</span>`;
-export const dots = e => `<span class="dots num"><i class="p">${fm(e.protein)}</i><i class="f">${fm(e.fat)}</i><i class="c">${fm(e.carbs)}</i></span>`;
+/** One macro value with a colored round badge holding its first letter; screen readers hear the full name. */
+const dot = (cls, name, value) => `<i class="${cls}"><b aria-hidden="true">${t(`macro.${name}Letter`)}</b><span class="sr">${t(`macro.${name}`)} </span>${fm(value)}</i>`;
+export const dots = e => `<span class="dots num">${dot("p", "protein", e.protein)}${dot("f", "fat", e.fat)}${dot("c", "carbs", e.carbs)}</span>`;
 
 export function viewDiary() {
   const tot = totals(S.entries), g = S.goals, own = ownFoodIds(S.foods);

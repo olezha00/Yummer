@@ -12,6 +12,9 @@ export const ru = {
   "macro.proteinShort": "белки",
   "macro.fatShort": "жиры",
   "macro.carbsShort": "углев.",
+  "macro.proteinLetter": "Б",
+  "macro.fatLetter": "Ж",
+  "macro.carbsLetter": "У",
 
   "meal.breakfast": "Завтрак",
   "meal.lunch": "Обед",

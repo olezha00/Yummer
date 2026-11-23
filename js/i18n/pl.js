@@ -11,6 +11,9 @@ export const pl = {
   "macro.proteinShort": "białko",
   "macro.fatShort": "tłuszcz",
   "macro.carbsShort": "węgl.",
+  "macro.proteinLetter": "B",
+  "macro.fatLetter": "T",
+  "macro.carbsLetter": "W",
 
   "meal.breakfast": "Śniadanie",
   "meal.lunch": "Obiad",
