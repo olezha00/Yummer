@@ -21,3 +21,13 @@ test("different products are not offered", () => {
   assert.deepEqual(findMatches({ name: "Skyr naturalny", brand: "Bakoma", kcal: 62, protein: 11, fat: 0, carbs: 4 }, saved), []);
   assert.deepEqual(findMatches(null, saved), []);
 });
+test("same nutrition alone matches a product saved under a name in another language", () => {
+  assert.deepEqual(findMatches({ name: "Twaróg półtłusty", brand: null, kcal: 133, protein: 18.7, fat: 4.7, carbs: 3.7 }, saved).map(f => f.id), ["b"]);
+});
+test("near-zero products do not match on nutrition alone", () => {
+  const water = { id: "w", name: "Вода", kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  assert.deepEqual(findMatches({ name: "Cola Zero", kcal: 0.4, protein: 0, fat: 0, carbs: 0 }, [water]), []);
+});
+test("missing values never count as equal nutrition", () => {
+  assert.equal(matchScore({ name: "A", kcal: null, protein: null, fat: null, carbs: null }, { name: "B", kcal: 0, protein: 0, fat: 0, carbs: 0 }), 0);
+});
